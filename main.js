@@ -1110,8 +1110,18 @@ app.whenReady().then(() => {
   setTimeout(runBackgroundUpdateCheck, 3500);
   setInterval(runBackgroundUpdateCheck, 30 * 60 * 1000);
 
-  // Garante que todas as janelas/popups e navegações em webviews fiquem dentro do Vortex
+  // Garante isolamento estrito contra injeção maliciosa em webviews (reforço de segurança do Chromium)
   app.on('web-contents-created', (event, contents) => {
+    contents.on('will-attach-webview', (wvEvent, webPreferences, params) => {
+      // Impede qualquer script em páginas web de tentar acessar módulos Node.js
+      delete webPreferences.preload;
+      webPreferences.nodeIntegration = false;
+      webPreferences.nodeIntegrationInWorker = false;
+      webPreferences.nodeIntegrationInSubFrames = false;
+      webPreferences.contextIsolation = true;
+      webPreferences.sandbox = true;
+    });
+
     // Intercepta window.open ou links com target="_blank"
     contents.setWindowOpenHandler(({ url }) => {
       // Permitir URLs internas do DevTools

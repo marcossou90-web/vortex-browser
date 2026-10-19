@@ -4,3 +4,10 @@ dist/
 screenshot*.png
 test_*.js
 .env
+*.enc
+*.json.bak
+last_release.json
+*.tmp
+*.bak
+VortexBrowserData/
+
