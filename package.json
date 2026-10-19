@@ -1,12 +1,10 @@
 {
   "name": "vortex-browser",
-  "version": "1.1.19",
+  "version": "1.1.20",
   "description": "Vortex - Modern, Fast, Minimalist & Privacy-Focused Web Browser",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "predist": "node bump-version.js",
-    "prerelease": "node bump-version.js",
     "dist": "electron-builder --win nsis",
     "release": "electron-builder --win nsis --publish always"
   },

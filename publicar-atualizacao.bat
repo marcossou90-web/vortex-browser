@@ -17,14 +17,16 @@ if exist ".env" (
     )
 )
 
-echo [1/4] Incrementando versao de patch e salvando alteracoes...
+echo [1/4] Incrementando versao e gerando tag de release...
 node bump-version.js
+for /f "usebackq tokens=*" %%V in (`node -e "console.log('v' + require('./package.json').version)"`) do set "NEW_TAG=%%V"
 git add -A
-git commit -m "chore: atualizar versao e publicar atualizacao" --allow-empty
+git commit -m "chore: release %NEW_TAG%" --allow-empty
+git tag -a %NEW_TAG% -m "Release %NEW_TAG%"
 
 echo.
-echo [2/4] Enviando codigo-fonte atualizado para o GitHub...
-git push -u origin main
+echo [2/4] Enviando codigo-fonte e tag %NEW_TAG% para o GitHub...
+git push -u origin main --tags
 if %errorlevel% neq 0 (
     echo [ERRO] Falha ao enviar para o Git.
     pause
