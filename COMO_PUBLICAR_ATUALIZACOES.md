@@ -18,37 +18,45 @@ O Vortex Browser agora conta com um **sistema de atualização automática idên
 
 ---
 
-## ⚙️ Passo a Passo para Configurar Seu Repositório
+## ⚙️ Repositório Configurado no Vortex
 
-### 1. Criar o repositório no GitHub (caso ainda não tenha criado)
-- Acesse [github.com/new](https://github.com/) e crie um repositório (público para downloads diretos gratuitos, por exemplo: `meu-usuario/vortex-browser`).
-
-### 2. Ajustar o `package.json`
-Abra o arquivo [`package.json`](file:///c:/Users/Suporte%20DHS/Desktop/meu%20navegador%20Vortex/package.json) e substitua `"seu-usuario"` e `"vortex-browser"` pelo seu nome de usuário e nome do repositório no GitHub:
+O código e o instalador já foram configurados para o seu repositório:
+- **Repositório oficial**: [https://github.com/marcossou90-web/vortex-browser](https://github.com/marcossou90-web/vortex-browser)
+- **Configuração no `package.json`**:
 ```json
 "publish": [
   {
     "provider": "github",
-    "owner": "SEU_USUARIO_GITHUB",
-    "repo": "NOME_DO_REPOSITORIO",
+    "owner": "marcossou90-web",
+    "repo": "vortex-browser",
     "releaseType": "release"
   }
 ]
 ```
 
-### 3. Como subir uma Nova Atualização (Gratuito):
-Sempre que você quiser lançar uma atualização:
-1. Execute no terminal:
+---
+
+## 🚀 Como subir a Primeira Versão e as Próximas Atualizações (Passo a Passo)
+
+### 1. Criar a Release no GitHub
+1. Abra no navegador: [https://github.com/marcossou90-web/vortex-browser/releases/new](https://github.com/marcossou90-web/vortex-browser/releases/new)
+2. No campo **Choose a tag**, digite: `v1.1.15` (ou a versão atual) e clique em **Create new tag**.
+3. No campo **Release title**, coloque: `Vortex Browser v1.1.15`.
+4. Arraste e solte na caixa de arquivos da release os dois arquivos da sua pasta [`dist`](file:///c:/Users/Suporte%20DHS/Desktop/meu%20navegador%20Vortex/dist):
+   - 📌 `Vortex Browser Setup 1.1.15.exe`
+   - 📌 `latest.yml` *(Fundamental: é este arquivo que indica a nova versão e o hash para o instalador)*
+5. Clique no botão verde **Publish release**.
+
+---
+
+## 🔄 Como Lançar Atualizações Futuras
+Sempre que fizer alterações no código e quiser liberar uma atualização para os usuários:
+1. No terminal execute:
    ```bash
    npm run dist
    ```
-   *(A versão no `package.json` será incrementada automaticamente pelo `bump-version.js`).*
-2. Vá até a pasta [`dist`](file:///c:/Users/Suporte%20DHS/Desktop/meu%20navegador%20Vortex/dist).
-3. Vá no seu repositório no GitHub > **Releases** > **Draft a new release**.
-4. Crie uma tag com a versão (ex: `v1.1.15`).
-5. Arraste e solte na release os dois arquivos gerados na pasta `dist`:
-   - `Vortex Browser Setup 1.1.15.exe` (ou o nome da versão)
-   - `latest.yml` *(importante: o `latest.yml` é o arquivo que avisa os navegadores instalados que há uma versão nova e seu hash de segurança)*.
-6. Clique em **Publish release**.
+   *(A versão no `package.json` sobe automaticamente: `1.1.15` -> `1.1.16`)*.
+2. Acesse [Releases do GitHub](https://github.com/marcossou90-web/vortex-browser/releases/new), crie a tag `v1.1.16` e anexe o novo `.exe` e o novo `latest.yml` gerados na pasta `dist/`.
+3. Clique em **Publish release**.
 
-Pronto! Todos os usuários que estiverem com o Vortex aberto receberão o aviso **`● Atualizar`** na tela sem você gastar 1 centavo com servidor.
+Em instantes, todos os usuários com o Vortex aberto verão o aviso **`● Atualizar`** no canto superior direito e atualizarão o navegador com 1 clique!
