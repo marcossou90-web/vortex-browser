@@ -1684,10 +1684,21 @@ addressInputEl.addEventListener('focus', () => {
   }
 });
 
-document.addEventListener('click', (e) => {
+document.addEventListener('mousedown', (e) => {
   if (!e.target.closest('.address-bar-wrapper')) {
     hideAutocomplete();
   }
+});
+
+addressInputEl.addEventListener('blur', () => {
+  // Pequeno timeout para permitir o clique em uma sugestão antes de fechar
+  setTimeout(() => {
+    hideAutocomplete();
+  }, 180);
+});
+
+window.addEventListener('blur', () => {
+  hideAutocomplete();
 });
 
 const homeSearchInputEl = document.getElementById('homeSearchInput');
@@ -3248,6 +3259,7 @@ loginInputNameEl?.addEventListener('keydown', (e) => {
 
 document.getElementById('btnConnectGoogleWeb')?.addEventListener('click', () => {
   profilePopupEl?.classList.remove('open');
+  closeProfileLoginModal();
   const googleLoginUrl = 'https://accounts.google.com/signin/v2/identifier?hl=pt-BR&continue=https%3A%2F%2Fwww.google.com%2F';
   createTab(googleLoginUrl);
 });

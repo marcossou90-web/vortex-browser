@@ -373,11 +373,24 @@ function createWindow() {
     callback({ cancel: true });
   });
 
-  // Otimização de Performance de Rede e Headers de Privacidade
+  // Otimização de Performance de Rede, Headers de Privacidade e Compatibilidade com Google
+  const cleanChromeUA = (defaultSession.getUserAgent() || '')
+    .replace(/Electron\/[0-9.]+\s?/g, '')
+    .replace(/Vortex\/[0-9.]+\s?/g, '')
+    .trim() || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+
+  defaultSession.setUserAgent(cleanChromeUA);
+
   defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     // DNT (Do Not Track) e GPC (Global Privacy Control)
     details.requestHeaders['DNT'] = '1';
     details.requestHeaders['Sec-GPC'] = '1';
+    
+    // Para contas Google e serviços que bloqueiam Electron, garantir User-Agent limpo
+    if (details.url.includes('google.com') || details.url.includes('accounts.google')) {
+      details.requestHeaders['User-Agent'] = cleanChromeUA;
+    }
+    
     callback({ requestHeaders: details.requestHeaders });
   });
 
