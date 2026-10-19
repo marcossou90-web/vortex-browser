@@ -2329,6 +2329,7 @@ body.incognito-active .address-bar-wrapper {
    BADGE & MODAL DE ATUALIZAÇÃO (Igual Google Chrome)
    ══════════════════════════════════════════════════ */
 .update-badge-btn {
+  display: none !important;
   background: rgba(34, 197, 94, 0.15) !important;
   border: 1px solid rgba(34, 197, 94, 0.45) !important;
   color: #4ade80 !important;
@@ -2336,13 +2337,16 @@ body.incognito-active .address-bar-wrapper {
   font-weight: 600 !important;
   padding: 4px 10px !important;
   border-radius: 14px !important;
-  display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
   margin-right: 4px;
   animation: updatePulse 2.5s infinite ease-in-out;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.update-badge-btn.show {
+  display: inline-flex !important;
 }
 
 .update-badge-btn:hover {

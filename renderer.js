@@ -3458,7 +3458,7 @@ if (window.vortexAPI?.getUserProfile) {
         }
         if (!isNewer) {
           // App já está na mesma versão ou superior: esconde o badge
-          if (btnUpdateBadge) btnUpdateBadge.style.display = 'none';
+          if (btnUpdateBadge) btnUpdateBadge.classList.remove('show');
           if (dmUpdateGroup) dmUpdateGroup.style.display = 'none';
           if (dmUpdateDivider) dmUpdateDivider.style.display = 'none';
           return;
@@ -3471,7 +3471,7 @@ if (window.vortexAPI?.getUserProfile) {
 
     // Exibe botão verde/azul pulsante no canto superior direito igual ao Chrome
     if (btnUpdateBadge) {
-      btnUpdateBadge.style.display = 'inline-flex';
+      btnUpdateBadge.classList.add('show');
       btnUpdateBadge.title = `Nova versão ${info?.version || ''} do Vortex disponível! Clique para atualizar.`;
     }
     // Exibe item no menu de 3 pontinhos
