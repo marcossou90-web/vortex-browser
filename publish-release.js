@@ -42,12 +42,11 @@ console.log(`Versão: ${oldVer} -> ${newVer}`);
 
 const tag = `v${newVer}`;
 
-// 3. Git commit e tag
+// 3. Git commit e sincronização
 console.log('\n[2/4] Registrando no Git e sincronizando com GitHub...');
 spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
 spawnSync('git', ['commit', '-m', `chore: release ${tag}`, '--allow-empty'], { stdio: 'inherit' });
-spawnSync('git', ['tag', '-a', tag, '-m', `Release ${tag}`], { stdio: 'inherit' });
-spawnSync('git', ['push', 'origin', 'main', '--tags'], { stdio: 'inherit' });
+spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
 
 // 4. Compila e publica via electron-builder (ele próprio cria a release no GitHub com todos os assets)
 console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
