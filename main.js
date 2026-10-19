@@ -1010,8 +1010,23 @@ ipcMain.handle('is-devtools-open', async (event, { targetWebContentsId }) => {
 });
 
 // ── Sistema de Atualizações Automáticas (Auto-Updater / GitHub Releases) ──
+// Token para download seguro de atualizações em repositório privado
+const VORTEX_UPDATE_TOKEN = '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';
+
 function setupAutoUpdater() {
   if (!autoUpdater) return;
+
+  try {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'marcossou90-web',
+      repo: 'vortex-browser',
+      private: true,
+      token: process.env.GH_TOKEN || VORTEX_UPDATE_TOKEN
+    });
+  } catch (err) {
+    console.warn('[AutoUpdater] Erro ao configurar FeedURL:', err.message);
+  }
 
   // Download automático em background igual ao Google Chrome (baixa silenciosamente e avisa quando pronto para reiniciar)
   autoUpdater.autoDownload = true;

@@ -46,7 +46,8 @@ const tag = `v${newVer}`;
 console.log('\n[2/4] Registrando no Git e sincronizando com GitHub...');
 spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
 spawnSync('git', ['commit', '-m', `chore: release ${tag}`, '--allow-empty'], { stdio: 'inherit' });
-spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
+spawnSync('git', ['tag', '-a', tag, '-m', `Release ${tag}`], { stdio: 'inherit' });
+spawnSync('git', ['push', 'origin', 'main', '--tags'], { stdio: 'inherit' });
 
 // 4. Compila e publica via electron-builder (ele próprio cria a release no GitHub com todos os assets)
 console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
@@ -62,6 +63,45 @@ const buildResult = spawnSync(npxCmd, ['electron-builder', '--win', 'nsis', '--p
 if (buildResult.status !== 0) {
   console.error('\n[ERRO] Falha durante a compilação ou publicação.');
   process.exit(buildResult.status || 1);
+}
+
+// 5. Garantir que a release seja marcada como publicada (draft: false) via GitHub API
+const https = require('https');
+const token = process.env.GH_TOKEN;
+if (token) {
+  const getReq = https.request({
+    hostname: 'api.github.com',
+    path: '/repos/marcossou90-web/vortex-browser/releases',
+    headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
+  }, res => {
+    let data = '';
+    res.on('data', d => data += d);
+    res.on('end', () => {
+      try {
+        const list = JSON.parse(data);
+        const rel = list.find(r => r.tag_name === tag);
+        if (rel && rel.draft) {
+          const patchBody = JSON.stringify({ draft: false });
+          const patchReq = https.request({
+            method: 'PATCH',
+            hostname: 'api.github.com',
+            path: `/repos/marcossou90-web/vortex-browser/releases/${rel.id}`,
+            headers: {
+              'Authorization': 'token ' + token,
+              'User-Agent': 'VortexUpdater',
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(patchBody)
+            }
+          }, pres => {
+            console.log(`[GitHub API] Status da publicação oficial: ${pres.statusCode}`);
+          });
+          patchReq.write(patchBody);
+          patchReq.end();
+        }
+      } catch(e) {}
+    });
+  });
+  getReq.end();
 }
 
 console.log('\n========================================================');

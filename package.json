@@ -1,6 +1,6 @@
 {
   "name": "vortex-browser",
-  "version": "1.1.24",
+  "version": "1.1.25",
   "description": "Vortex - Modern, Fast, Minimalist & Privacy-Focused Web Browser",
   "main": "main.js",
   "scripts": {
@@ -37,6 +37,7 @@
         "provider": "github",
         "owner": "marcossou90-web",
         "repo": "vortex-browser",
+        "private": true,
         "releaseType": "release"
       }
     ],
