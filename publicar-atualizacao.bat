@@ -26,7 +26,8 @@ git tag -a %NEW_TAG% -m "Release %NEW_TAG%"
 
 echo.
 echo [2/4] Enviando codigo-fonte e tag %NEW_TAG% para o GitHub...
-git push -u origin main --tags
+git push -u origin main
+git push origin %NEW_TAG%
 if %errorlevel% neq 0 (
     echo [ERRO] Falha ao enviar para o Git.
     pause
