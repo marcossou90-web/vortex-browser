@@ -480,6 +480,28 @@ window.addEventListener('message', (event) => {
   } else if (event.data.type === 'app-version-response' && event.data.version) {
     const vEl = document.getElementById('aboutAppVersion');
     if (vEl) vEl.innerText = `Versão ${event.data.version} (Versão oficial) 64 bits`;
+  } else if (event.data.type === 'check-updates-response') {
+    const res = event.data.result;
+    const btn = document.getElementById('btnCheckUpdateSettings');
+    const desc = document.getElementById('aboutUpdateStatusDesc');
+    const badge = document.getElementById('badgeUpdateStatus');
+
+    if (btn) btn.disabled = false;
+    if (res && res.updateAvailable) {
+      if (desc) desc.textContent = `Nova versão ${res.version} encontrada!`;
+      if (badge) {
+        badge.textContent = 'Nova Versão!';
+        badge.style.background = 'rgba(34, 197, 94, 0.2)';
+        badge.style.color = '#22c55e';
+      }
+    } else {
+      if (desc) desc.textContent = 'O Vortex Browser está na versão mais recente.';
+      if (badge) {
+        badge.textContent = '✓ Atualizado';
+        badge.style.background = 'rgba(34, 197, 94, 0.2)';
+        badge.style.color = '#22c55e';
+      }
+    }
   }
 });
 
@@ -502,16 +524,8 @@ document.getElementById('btnCheckUpdateSettings')?.addEventListener('click', asy
   }
 
   try {
-    let res = null;
     if (window.vortexAPI?.checkForUpdates) {
-      res = await window.vortexAPI.checkForUpdates();
-    } else {
-      // Caso executando em iframe dentro de webview
-      window.parent.postMessage({ type: 'trigger-check-updates' }, '*');
-      res = { success: true };
-    }
-
-    setTimeout(() => {
+      const res = await window.vortexAPI.checkForUpdates();
       if (btn) btn.disabled = false;
       if (res && res.updateAvailable) {
         if (desc) desc.textContent = `Nova versão ${res.version} encontrada!`;
@@ -528,7 +542,13 @@ document.getElementById('btnCheckUpdateSettings')?.addEventListener('click', asy
           badge.style.color = '#22c55e';
         }
       }
-    }, 1500);
+    } else {
+      // Como roda em <webview> isolada, dispara evento para o processo pai checar
+      window.parent.postMessage({ type: 'trigger-check-updates' }, '*');
+      setTimeout(() => {
+        if (btn && btn.disabled) btn.disabled = false;
+      }, 5000);
+    }
   } catch (err) {
     if (btn) btn.disabled = false;
     if (desc) desc.textContent = 'Não foi possível verificar no momento (offline ou servidor indisponível).';

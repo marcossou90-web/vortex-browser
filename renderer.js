@@ -2419,7 +2419,14 @@ window.addEventListener('message', (e) => {
   }
   if (data.type === 'trigger-check-updates') {
     if (window.vortexAPI?.checkForUpdates) {
-      window.vortexAPI.checkForUpdates();
+      window.vortexAPI.checkForUpdates().then(res => {
+        try {
+          const settingsTab = tabs.find(t => t.url && t.url.includes('settings.html'));
+          if (settingsTab && settingsTab.webview && settingsTab.webview.contentWindow) {
+            settingsTab.webview.contentWindow.postMessage({ type: 'check-updates-response', result: res }, '*');
+          }
+        } catch(e) {}
+      });
     }
   }
   if (data.type === 'open-download-file' && data.path) {
