@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Publicar Atualização do Vortex Browser
+title Publicar Atualizacao do Vortex Browser
 color 0b
 
 echo ========================================================
@@ -10,39 +10,29 @@ echo.
 echo Repositório: https://github.com/marcossou90-web/vortex-browser
 echo.
 
-if "%GH_TOKEN%"=="" (
-    echo [!] Para publicar automaticamente no GitHub sem precisar arrastar arquivos,
-    echo     o electron-builder precisa de um Personal Access Token (GH_TOKEN).
-    echo.
-    echo 1. Gere seu token gratuito em: https://github.com/settings/tokens (classic)
-    echo    Marque apenas a permissão: 'repo'
-    echo.
-    set /p USER_TOKEN="Cole seu Personal Access Token aqui (ou aperte ENTER para modo manual): "
-    if not "%USER_TOKEN%"=="" (
-        set "GH_TOKEN=%USER_TOKEN%"
-        echo [OK] Token configurado para esta sessão!
+:: Carrega token com segurança a partir do arquivo .env local (protegido pelo .gitignore)
+if exist ".env" (
+    for /f "usebackq tokens=1,2 delims==" %%A in (".env") do (
+        if "%%A"=="GH_TOKEN" set "GH_TOKEN=%%B"
     )
 )
 
-echo.
-echo [1/3] Enviando código fonte para o GitHub...
+echo [1/3] Enviando código-fonte para o GitHub...
 git push -u origin main
-
-if not "%GH_TOKEN%"=="" (
-    echo.
-    echo [2/3] Compilando e publicando release automaticamente no GitHub...
-    npm run release
-    echo.
-    echo [3/3] Sucesso! Nova versão publicada no GitHub Releases!
-) else (
-    echo.
-    echo [2/3] Compilando instalador local...
-    npm run dist
-    echo.
-    echo [3/3] Concluído! Os arquivos .exe e latest.yml estão na pasta 'dist'.
-    echo       Abra https://github.com/marcossou90-web/vortex-browser/releases/new e anexe-os!
+if %errorlevel% neq 0 (
+    echo [ERRO] Falha ao enviar para o Git.
+    pause
+    exit /b %errorlevel%
 )
 
 echo.
+echo [2/3] Compilando instalador e publicando versao no GitHub Releases...
+npm run release
+
+echo.
 echo ========================================================
+echo [3/3] SUCESSO! A atualizacao foi publicada no GitHub!
+echo       Todos os usuarios do Vortex serao notificados.
+echo ========================================================
+echo.
 pause
