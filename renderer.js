@@ -233,6 +233,55 @@ window.vortexAPI.onPrivateTabReady((data) => {
   const { partition, url } = data;
   createIncognitoTabWithPartition(partition, url);
 });
+// ══════════════════════════════════════════
+// HELPERS DE FAVICON DE ABAS (Estilo Google Chrome)
+// ══════════════════════════════════════════
+function applyFaviconToTab(faviconEl, faviconUrl, currentUrl = '', isIncognito = false) {
+  if (!faviconEl) return;
+  const img = document.createElement('img');
+  img.src = faviconUrl;
+  img.width = 16;
+  img.height = 16;
+  img.style.cssText = 'width:16px;height:16px;object-fit:contain;border-radius:2px;flex-shrink:0;display:block;';
+  
+  img.onerror = () => {
+    // Se a URL direta de favicon falhar, tenta via Google Favicons API se for um site web válido
+    if (currentUrl && !currentUrl.startsWith('about:') && !currentUrl.startsWith('vortex://') && !faviconUrl.includes('google.com/s2/favicons')) {
+      try {
+        const domain = new URL(currentUrl).hostname;
+        if (domain) {
+          img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+          return;
+        }
+      } catch(e) {}
+    }
+    // Fallback padrão se tudo falhar
+    if (isIncognito) {
+      faviconEl.className = 'tab-favicon tab-favicon-incognito';
+      faviconEl.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+    } else {
+      faviconEl.className = 'tab-favicon';
+      faviconEl.innerHTML = `<svg class="tab-favicon-default" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+    }
+  };
+
+  img.onload = () => {
+    faviconEl.className = 'tab-favicon';
+    faviconEl.innerHTML = '';
+    faviconEl.appendChild(img);
+  };
+}
+
+function setTabFaviconFromUrl(faviconEl, url, isIncognito = false) {
+  if (!faviconEl || !url || url.startsWith('about:') || url.startsWith('vortex://')) return;
+  try {
+    const domain = new URL(url).hostname;
+    if (domain) {
+      const gFavicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+      applyFaviconToTab(faviconEl, gFavicon, url, isIncognito);
+    }
+  } catch(e) {}
+}
 
 function createIncognitoTabWithPartition(partition, initialUrl) {
   tabCounter++;
@@ -295,8 +344,13 @@ function createIncognitoTabWithPartition(partition, initialUrl) {
       }
       const faviconEl = t.tabEl.querySelector('.tab-favicon');
       if (faviconEl && faviconEl.querySelector('.tab-favicon-spinner')) {
-        faviconEl.className = 'tab-favicon tab-favicon-incognito';
-        faviconEl.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/></svg>`;
+        // Se a página parou de carregar e ainda estava com o spinner, tenta carregar o favicon do domínio
+        if (t.url && !t.url.startsWith('about:') && !t.url.startsWith('vortex://')) {
+          setTabFaviconFromUrl(faviconEl, t.url, true);
+        } else {
+          faviconEl.className = 'tab-favicon tab-favicon-incognito';
+          faviconEl.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/></svg>`;
+        }
       }
     }
     if (activeTabId === id) updateNavButtons();
@@ -308,18 +362,7 @@ function createIncognitoTabWithPartition(partition, initialUrl) {
     if (!t) return;
     const faviconEl = t.tabEl.querySelector('.tab-favicon');
     if (!faviconEl) return;
-    const img = document.createElement('img');
-    img.src = e.favicons[0];
-    img.style.cssText = 'width:14px;height:14px;object-fit:contain;border-radius:2px;flex-shrink:0;';
-    img.onerror = () => {
-      faviconEl.className = 'tab-favicon tab-favicon-incognito';
-      faviconEl.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
-    };
-    img.onload = () => {
-      faviconEl.className = 'tab-favicon';
-      faviconEl.innerHTML = '';
-      faviconEl.appendChild(img);
-    };
+    applyFaviconToTab(faviconEl, e.favicons[0], t.url, true);
   });
   wv.addEventListener('page-title-updated', (e) => {
     const t = tabs.find(item => item.id === id);
@@ -621,7 +664,21 @@ function renderBookmarksBar() {
   items.forEach(b => {
     const item = document.createElement('div');
     item.className = 'bookmark-item';
-    item.innerHTML = `<span class="bookmark-fav">${b.icon || '🔖'}</span><span>${b.title}</span>`;
+
+    let domain = '';
+    if (b.url && !b.url.startsWith('about:') && !b.url.startsWith('vortex://')) {
+      try {
+        domain = new URL(b.url).hostname;
+      } catch(e) {}
+    }
+
+    let favContent = b.icon || '🔖';
+    if (domain) {
+      const gFavicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+      favContent = `<img src="${gFavicon}" alt="" onerror="this.outerHTML='<span>${b.icon || '🔖'}</span>'">`;
+    }
+
+    item.innerHTML = `<span class="bookmark-fav">${favContent}</span><span>${b.title}</span>`;
     item.addEventListener('click', () => navigateTo(b.url));
     bar.appendChild(item);
   });
@@ -754,10 +811,14 @@ function createWebview(id, url) {
       if (titleEl && (!titleEl.innerText || titleEl.innerText === 'Carregando...')) {
         titleEl.innerText = t.title || (t.url ? new URL(t.url).hostname : 'Nova Aba');
       }
-      // Se não recebeu favicon, volta ao ícone padrão
+      // Se não recebeu favicon pelo page-favicon-updated, tenta resolver via URL do site
       const faviconEl = t.tabEl.querySelector('.tab-favicon');
       if (faviconEl && faviconEl.querySelector('.tab-favicon-spinner')) {
-        faviconEl.innerHTML = `<svg class="tab-favicon-default" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+        if (t.url && !t.url.startsWith('about:') && !t.url.startsWith('vortex://')) {
+          setTabFaviconFromUrl(faviconEl, t.url, false);
+        } else {
+          faviconEl.innerHTML = `<svg class="tab-favicon-default" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+        }
       }
     }
     if (activeTabId === id) updateNavButtons();
@@ -770,20 +831,7 @@ function createWebview(id, url) {
     if (!t) return;
     const faviconEl = t.tabEl.querySelector('.tab-favicon');
     if (!faviconEl) return;
-    const faviconUrl = e.favicons[0];
-    const img = document.createElement('img');
-    img.src = faviconUrl;
-    img.width = 14;
-    img.height = 14;
-    img.style.cssText = 'width:14px;height:14px;object-fit:contain;border-radius:2px;flex-shrink:0;';
-    img.onerror = () => {
-      // Fallback para ícone padrão se a imagem falhar
-      faviconEl.innerHTML = `<svg class="tab-favicon-default" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
-    };
-    img.onload = () => {
-      faviconEl.innerHTML = '';
-      faviconEl.appendChild(img);
-    };
+    applyFaviconToTab(faviconEl, e.favicons[0], t.url, false);
   });
 
   wv.addEventListener('page-title-updated', (e) => {
@@ -1408,21 +1456,46 @@ function renderAutocompleteSuggestions(items, query) {
 
   let html = '';
   items.forEach((item, idx) => {
-    let iconSvg = '';
+    let iconHtml = '';
     let badgeText = '';
+
+    // Extrair domínio para buscar favicon real via Google Favicons API (igual ao Chrome)
+    let domain = '';
+    if (item.url) {
+      try {
+        domain = new URL(item.url).hostname;
+      } catch(e) {
+        domain = item.url.split('/')[0];
+      }
+    }
 
     if (item.type === 'history') {
       badgeText = '<span class="ac-badge">Histórico</span>';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+      if (domain) {
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+        iconHtml = `<img src="${faviconUrl}" alt="" onerror="this.outerHTML='<svg viewBox=\\\'0 0 24 24\\\' fill=\\\'none\\\' stroke=\\\'currentColor\\\' stroke-width=\\\'2\\\'><circle cx=\\\'12\\\' cy=\\\'12\\\' r=\\\'10\\\'/><polyline points=\\\'12 6 12 12 16 14\\\'/></svg>'">`;
+      } else {
+        iconHtml = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+      }
     } else if (item.type === 'bookmark') {
       badgeText = '<span class="ac-badge">Favorito</span>';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="#facc15" stroke="#facc15" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+      if (domain) {
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+        iconHtml = `<img src="${faviconUrl}" alt="" onerror="this.outerHTML='<svg viewBox=\\\'0 0 24 24\\\' fill=\\\'#facc15\\\' stroke=\\\'#facc15\\\' stroke-width=\\\'1\\\'><polygon points=\\\'12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\\\'/></svg>'">`;
+      } else {
+        iconHtml = `<svg viewBox="0 0 24 24" fill="#facc15" stroke="#facc15" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+      }
     } else if (item.type === 'direct-url') {
       badgeText = '<span class="ac-badge">Acessar</span>';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+      if (domain) {
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+        iconHtml = `<img src="${faviconUrl}" alt="" onerror="this.outerHTML='<svg viewBox=\\\'0 0 24 24\\\' fill=\\\'none\\\' stroke=\\\'currentColor\\\' stroke-width=\\\'2\\\'><circle cx=\\\'12\\\' cy=\\\'12\\\' r=\\\'10\\\'/><line x1=\\\'2\\\' y1=\\\'12\\\' x2=\\\'22\\\' y2=\\\'12\\\'/><path d=\\\'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z\\\'/></svg>'">`;
+      } else {
+        iconHtml = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+      }
     } else {
       badgeText = '<span class="ac-badge">Pesquisa</span>';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+      iconHtml = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
     }
 
     // Destaque visual do texto que o usuário digitou
@@ -1438,7 +1511,7 @@ function renderAutocompleteSuggestions(items, query) {
 
     html += `
       <div class="ac-item" data-index="${idx}" data-target="${escapeHtml(item.target)}">
-        <div class="ac-icon">${iconSvg}</div>
+        <div class="ac-icon">${iconHtml}</div>
         <div class="ac-content">
           <span class="ac-title">${titleFormatted}</span>
           ${urlDisplay}
