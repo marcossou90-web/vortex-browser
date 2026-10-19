@@ -3440,7 +3440,32 @@ if (window.vortexAPI?.getUserProfile) {
   let updateState = 'none'; // 'none' | 'available' | 'downloading' | 'downloaded'
   let latestUpdateInfo = null;
 
-  function showUpdateNotification(info) {
+  async function showUpdateNotification(info) {
+    if (!info || !info.version) return;
+
+    // Dupla checagem: obter versão local do app e garantir que info.version é estritamente maior
+    try {
+      if (window.vortexAPI?.getAppVersion) {
+        const localVer = await window.vortexAPI.getAppVersion();
+        const r = info.version.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+        const l = (localVer || '0.0.0').replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+        let isNewer = false;
+        for (let i = 0; i < Math.max(r.length, l.length); i++) {
+          const rv = r[i] || 0;
+          const lv = l[i] || 0;
+          if (rv > lv) { isNewer = true; break; }
+          if (rv < lv) { isNewer = false; break; }
+        }
+        if (!isNewer) {
+          // App já está na mesma versão ou superior: esconde o badge
+          if (btnUpdateBadge) btnUpdateBadge.style.display = 'none';
+          if (dmUpdateGroup) dmUpdateGroup.style.display = 'none';
+          if (dmUpdateDivider) dmUpdateDivider.style.display = 'none';
+          return;
+        }
+      }
+    } catch(e) {}
+
     latestUpdateInfo = info;
     updateState = 'available';
 

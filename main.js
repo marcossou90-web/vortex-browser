@@ -979,7 +979,29 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('update-available', (info) => {
-    console.log('[AutoUpdater] Nova versão encontrada:', info.version);
+    const currentVer = app.getVersion();
+    console.log(`[AutoUpdater] Versão instalada: ${currentVer} | Versão no GitHub: ${info.version}`);
+    
+    // Compara versões para NUNCA exibir atualização se o app já estiver na versão mais recente
+    function isNewerVersion(remote, local) {
+      if (!remote || !local) return false;
+      const r = remote.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+      const l = local.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+      for (let i = 0; i < Math.max(r.length, l.length); i++) {
+        const rv = r[i] || 0;
+        const lv = l[i] || 0;
+        if (rv > lv) return true;
+        if (rv < lv) return false;
+      }
+      return false;
+    }
+
+    if (!isNewerVersion(info.version, currentVer)) {
+      console.log('[AutoUpdater] Versão remota é igual ou menor. Nenhuma notificação necessária.');
+      return;
+    }
+
+    console.log('[AutoUpdater] Nova versão disponível encontrada:', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-available', {
         version: info.version,
