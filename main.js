@@ -507,6 +507,7 @@ ipcMain.on('download-url', (event, url) => {
 
 // IPC para mostrar arquivo baixado na pasta
 ipcMain.on('show-item-in-folder', (event, fullPath) => {
+  if (!isTrustedSender(event)) return;
   if (fullPath && fs.existsSync(fullPath)) {
     shell.showItemInFolder(fullPath);
   } else {
@@ -516,6 +517,7 @@ ipcMain.on('show-item-in-folder', (event, fullPath) => {
 
 // IPC para abrir arquivo baixado
 ipcMain.on('open-path', (event, fullPath) => {
+  if (!isTrustedSender(event)) return;
   if (fullPath && fs.existsSync(fullPath)) {
     shell.openPath(fullPath);
   }
@@ -536,12 +538,22 @@ ipcMain.on('open-new-window', () => {
   createWindow();
 });
 
+// ── Validação Estrita de Remetente (Prevenção de Ataques IPC) ───────────
+// Garante que APENAS a janela nativa do próprio Vortex possa acessar o cofre de senhas
+function isTrustedSender(event) {
+  if (!event || !event.sender) return false;
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  return event.sender.id === mainWindow.webContents.id;
+}
+
 // ── IPC Handlers: Gerenciador de Senhas e Sincronização por E-mail ─────
-ipcMain.handle('get-saved-passwords', () => {
+ipcMain.handle('get-saved-passwords', (event) => {
+  if (!isTrustedSender(event)) return [];
   return loadPasswords();
 });
 
 ipcMain.handle('save-password', (event, entry) => {
+  if (!isTrustedSender(event)) return { success: false, error: 'Acesso negado' };
   if (!entry || !entry.url || !entry.password) return { success: false };
   const list = loadPasswords();
   const index = list.findIndex(item => item.url === entry.url && item.username === entry.username);
@@ -564,13 +576,15 @@ ipcMain.handle('save-password', (event, entry) => {
 });
 
 ipcMain.handle('delete-password', (event, id) => {
+  if (!isTrustedSender(event)) return { success: false, error: 'Acesso negado' };
   let list = loadPasswords();
   list = list.filter(item => item.id !== id);
   const ok = savePasswords(list);
   return { success: ok, passwords: list };
 });
 
-ipcMain.handle('get-user-profile', () => {
+ipcMain.handle('get-user-profile', (event) => {
+  if (!isTrustedSender(event)) return null;
   // Retorna APENAS o perfil salvo pelo próprio usuário no Vortex.
   // NUNCA lê dados de outros navegadores automaticamente.
   // O usuário deve conectar seu perfil manualmente pela interface.
@@ -652,7 +666,8 @@ ipcMain.handle('save-user-profile', (event, profile) => {
   return { success: ok, profile: updated };
 });
 
-ipcMain.handle('export-vault', () => {
+ipcMain.handle('export-vault', (event) => {
+  if (!isTrustedSender(event)) return null;
   const passwords = loadPasswords();
   const profile = loadUserProfile();
   const vaultPayload = {
@@ -665,6 +680,7 @@ ipcMain.handle('export-vault', () => {
 });
 
 ipcMain.handle('import-vault', (event, jsonString) => {
+  if (!isTrustedSender(event)) return { success: false, count: 0, error: 'Acesso negado' };
   try {
     const data = JSON.parse(jsonString);
     if (Array.isArray(data.passwords)) {
