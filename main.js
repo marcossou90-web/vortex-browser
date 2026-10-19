@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, shell, screen, webContents, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, screen, webContents, safeStorage, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -236,14 +236,18 @@ async function downloadFtpUrl(ftpUrl) {
     fileName = path.basename(remotePath) || 'download';
 
     const downloadsDir = app.getPath('downloads');
-    localPath = path.join(downloadsDir, fileName);
-    let counter = 1;
-    const ext = path.extname(fileName);
-    const base = path.basename(fileName, ext);
-    while (fs.existsSync(localPath)) {
-      localPath = path.join(downloadsDir, `${base} (${counter})${ext}`);
-      counter++;
+    const defaultPath = path.join(downloadsDir, fileName);
+
+    const chosenPath = dialog.showSaveDialogSync(mainWindow, {
+      title: 'Salvar Arquivo FTP Como',
+      defaultPath: defaultPath,
+      properties: ['showOverwriteConfirmation']
+    });
+
+    if (!chosenPath) {
+      return;
     }
+    localPath = chosenPath;
 
     client = new ftp.Client();
     client.ftp.verbose = false;
@@ -381,23 +385,28 @@ function createWindow() {
   defaultSession.on('will-download', (event, item, webContents) => {
     const fileName = item.getFilename();
     const totalBytes = item.getTotalBytes();
-
-    // Salvar diretamente na pasta Downloads do usuário sem travar em caixas de diálogo
     const downloadsDir = app.getPath('downloads');
-    let savePath = path.join(downloadsDir, fileName);
-    let counter = 1;
-    const ext = path.extname(fileName);
-    const base = path.basename(fileName, ext);
-    while (fs.existsSync(savePath)) {
-      savePath = path.join(downloadsDir, `${base} (${counter})${ext}`);
-      counter++;
+    const defaultPath = path.join(downloadsDir, fileName);
+
+    // Abre diálogo para o usuário escolher a pasta de destino e nome do arquivo (igual Chrome)
+    const chosenPath = dialog.showSaveDialogSync(mainWindow, {
+      title: 'Salvar Arquivo Como',
+      defaultPath: defaultPath,
+      properties: ['showOverwriteConfirmation']
+    });
+
+    // Se o usuário cancelou a caixa de diálogo
+    if (!chosenPath) {
+      item.cancel();
+      return;
     }
-    item.setSavePath(savePath);
+
+    item.setSavePath(chosenPath);
     
     // Notifica início do download
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('download-started', {
-        fileName,
+        fileName: path.basename(chosenPath),
         totalBytes
       });
     }
@@ -406,7 +415,7 @@ function createWindow() {
       if (state === 'progressing') {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('download-progress', {
-            fileName,
+            fileName: path.basename(chosenPath),
             receivedBytes: item.getReceivedBytes(),
             totalBytes: item.getTotalBytes()
           });
@@ -417,9 +426,9 @@ function createWindow() {
     item.once('done', (event, state) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('download-completed', {
-          fileName,
+          fileName: path.basename(chosenPath),
           state, // 'completed', 'cancelled', 'interrupted'
-          savePath: item.getSavePath()
+          savePath: item.getSavePath ? item.getSavePath() : chosenPath
         });
       }
     });
@@ -719,29 +728,34 @@ ipcMain.on('open-private-tab', (event, initialUrl) => {
     const fileName = item.getFilename();
     const totalBytes = item.getTotalBytes();
     const downloadsDir = app.getPath('downloads');
-    let savePath = path.join(downloadsDir, fileName);
-    let counter = 1;
-    const ext = path.extname(fileName);
-    const base = path.basename(fileName, ext);
-    while (fs.existsSync(savePath)) {
-      savePath = path.join(downloadsDir, `${base} (${counter})${ext}`);
-      counter++;
+    const defaultPath = path.join(downloadsDir, fileName);
+
+    const chosenPath = dialog.showSaveDialogSync(mainWindow, {
+      title: 'Salvar Arquivo Como (Guia Anônima)',
+      defaultPath: defaultPath,
+      properties: ['showOverwriteConfirmation']
+    });
+
+    if (!chosenPath) {
+      item.cancel();
+      return;
     }
-    item.setSavePath(savePath);
+
+    item.setSavePath(chosenPath);
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-started', { fileName, totalBytes });
+      mainWindow.webContents.send('download-started', { fileName: path.basename(chosenPath), totalBytes });
     }
     item.on('updated', (e2, state) => {
       if (state === 'progressing' && mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('download-progress', {
-          fileName, receivedBytes: item.getReceivedBytes(), totalBytes: item.getTotalBytes()
+          fileName: path.basename(chosenPath), receivedBytes: item.getReceivedBytes(), totalBytes: item.getTotalBytes()
         });
       }
     });
     item.once('done', (e2, state) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('download-completed', {
-          fileName, state, savePath: item.getSavePath ? item.getSavePath() : savePath
+          fileName: path.basename(chosenPath), state, savePath: item.getSavePath ? item.getSavePath() : chosenPath
         });
       }
     });
