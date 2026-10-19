@@ -984,8 +984,8 @@ ipcMain.handle('is-devtools-open', async (event, { targetWebContentsId }) => {
 function setupAutoUpdater() {
   if (!autoUpdater) return;
 
-  // Não fazer download automático silencioso sem consentimento (estilo Chrome: avisa primeiro)
-  autoUpdater.autoDownload = false;
+  // Download automático em background igual ao Google Chrome (baixa silenciosamente e avisa quando pronto para reiniciar)
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('checking-for-update', () => {
@@ -1095,8 +1095,9 @@ app.whenReady().then(() => {
   createWindow();
   setupAutoUpdater();
 
-  // Em produção, verifica atualizações após 3 segundos da inicialização
-  setTimeout(() => {
+  // Verificação de atualização estilo Google Chrome:
+  // Checa 3.5 segundos após iniciar e depois periodicamente a cada 30 minutos em segundo plano
+  function runBackgroundUpdateCheck() {
     try {
       if (app.isPackaged && autoUpdater) {
         autoUpdater.checkForUpdates().catch(err => {
@@ -1104,7 +1105,10 @@ app.whenReady().then(() => {
         });
       }
     } catch(e) {}
-  }, 3500);
+  }
+
+  setTimeout(runBackgroundUpdateCheck, 3500);
+  setInterval(runBackgroundUpdateCheck, 30 * 60 * 1000);
 
   // Garante que todas as janelas/popups e navegações em webviews fiquem dentro do Vortex
   app.on('web-contents-created', (event, contents) => {

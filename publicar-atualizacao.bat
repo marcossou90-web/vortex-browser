@@ -17,7 +17,13 @@ if exist ".env" (
     )
 )
 
-echo [1/3] Enviando código-fonte para o GitHub...
+echo [1/4] Incrementando versao de patch e salvando alteracoes...
+node bump-version.js
+git add -A
+git commit -m "chore: atualizar versao e publicar atualizacao" --allow-empty
+
+echo.
+echo [2/4] Enviando codigo-fonte atualizado para o GitHub...
 git push -u origin main
 if %errorlevel% neq 0 (
     echo [ERRO] Falha ao enviar para o Git.
@@ -26,12 +32,17 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/3] Compilando instalador e publicando versao no GitHub Releases...
+echo [3/4] Compilando instalador .exe e publicando release oficial no GitHub...
 npm run release
+if %errorlevel% neq 0 (
+    echo [ERRO] Falha ao compilar ou publicar release.
+    pause
+    exit /b %errorlevel%
+)
 
 echo.
 echo ========================================================
-echo [3/3] SUCESSO! A atualizacao foi publicada no GitHub!
+echo [4/4] SUCESSO! A atualizacao foi publicada no GitHub!
 echo       Todos os usuarios do Vortex serao notificados.
 echo ========================================================
 echo.
