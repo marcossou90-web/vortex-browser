@@ -199,7 +199,7 @@
       </button>
 
       <!-- Botão Badge de Atualização (Igual Google Chrome: 'Atualizar' verde/azul destacado no canto superior direito) -->
-      <button class="nav-btn update-badge-btn" id="btnUpdateBadge" title="Atualização do Vortex disponível!" style="display: none;">
+      <button class="nav-btn update-badge-btn" id="btnUpdateBadge" title="Atualização do Vortex disponível!">
         <span class="update-badge-dot"></span>
         <span class="update-badge-text">Atualizar</span>
       </button>
@@ -414,11 +414,11 @@
         <span>Adicionar aos favoritos</span><kbd>Ctrl+D</kbd>
       </div>
     </div>
-    <div class="dots-divider" id="dm-update-divider" style="display: none;"></div>
-    <div class="dots-group" id="dm-update-group" style="display: none;">
+    <div class="dots-divider dm-update-toggle" id="dm-update-divider"></div>
+    <div class="dots-group dm-update-toggle" id="dm-update-group">
       <div class="dots-item dots-item-update" id="dm-update">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        <span style="color: #4ade80; font-weight: 600;">Reiniciar para atualizar</span>
+        <span class="dm-update-text">Reiniciar para atualizar</span>
       </div>
     </div>
     <div class="dots-divider"></div>
@@ -669,14 +669,14 @@
           </div>
         </div>
 
-        <div class="update-progress-container" id="updateProgressContainer" style="display: none;">
+        <div class="update-progress-container" id="updateProgressContainer">
           <div class="update-progress-bar-bg">
-            <div class="update-progress-bar-fill" id="updateProgressBarFill" style="width: 0%;"></div>
+            <div class="update-progress-bar-fill" id="updateProgressBarFill"></div>
           </div>
           <div class="update-progress-label" id="updateProgressLabel">Baixando atualização... 0%</div>
         </div>
 
-        <div class="update-ready-box" id="updateReadyBox" style="display: none;">
+        <div class="update-ready-box" id="updateReadyBox">
           <div class="update-ready-icon">✓</div>
           <div class="update-ready-text">Atualização baixada com sucesso! O Vortex será reiniciado e manterá todas as suas abas e dados abertos.</div>
         </div>

@@ -532,6 +532,12 @@ option { background: var(--bg-panel); color: var(--text-main); }
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
+.setting-control-update {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 
 
 
