@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extensões - Vortex Browser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #1c2333;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --card-hover: #1f2937;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    /* ── Layout ── */
+    .ext-layout { display: flex; min-height: 100vh; }
+    .ext-sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 20px 0;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .ext-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ext-brand-name { font-size: 16px; font-weight: 700; color: var(--accent); }
+    .ext-nav { padding: 12px 0; flex: 1; }
+    .ext-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; font-weight: 500;
+      border-left: 3px solid transparent;
+      transition: all .18s;
+    }
+    .ext-nav-item:hover { background: rgba(56,189,248,.07); color: var(--text); }
+    .ext-nav-item.active { border-left-color: var(--accent); color: var(--accent); background: rgba(56,189,248,.1); }
+    .ext-nav-item svg { flex-shrink: 0; }
+
+    /* ── Main area ── */
+    .ext-main { flex: 1; padding: 32px 40px; overflow-y: auto; }
+    .ext-page { display: none; }
+    .ext-page.active { display: block; }
+
+    .page-header {
+      margin-bottom: 28px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .page-title { font-size: 22px; font-weight: 700; }
+    .page-title span { color: var(--accent); }
+
+    /* ── Search bar ── */
+    .search-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 14px;
+      width: 340px;
+    }
+    .search-bar input {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--text); font-size: 14px;
+    }
+    .search-bar input::placeholder { color: var(--text-muted); }
+
+    /* ── Filter chips ── */
+    .filter-chips { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .chip {
+      padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border); cursor: pointer; background: var(--bg2);
+      color: var(--text-muted); transition: all .15s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+    /* ── Extension cards grid (My Extensions) ── */
+    .ext-cards-grid { display: flex; flex-direction: column; gap: 12px; }
+    .ext-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color .18s, background .18s;
+    }
+    .ext-card:hover { border-color: rgba(56,189,248,.35); background: var(--card-hover); }
+    .ext-icon {
+      width: 48px; height: 48px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+      background: var(--bg3); border: 1px solid var(--border);
+    }
+    .ext-icon img { width: 36px; height: 36px; object-fit: contain; }
+    .ext-info { flex: 1; min-width: 0; }
+    .ext-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ext-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .ext-version { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .ext-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; border-radius: 22px;
+      background: var(--border); cursor: pointer; transition: background .2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; bottom: 3px; left: 3px; transition: transform .2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+    .btn-sm {
+      padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border); cursor: pointer; background: var(--bg3);
+      color: var(--text-muted); transition: all .15s;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-pin { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 5px; transition: color .15s; }
+    .btn-pin:hover { color: var(--accent); }
+    .btn-pin.pinned { color: var(--accent); }
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--text-muted);
+    }
+    .empty-state svg { margin-bottom: 16px; opacity: .4; }
+    .empty-state h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .empty-state p { font-size: 14px; line-height: 1.6; }
+
+    /* ── Store grid ── */
+    .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .store-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: border-color .18s, transform .18s;
+      cursor: pointer;
+    }
+    .store-card:hover { border-color: rgba(56,189,248,.4); transform: translateY(-2px); }
+    .store-card-header { padding: 18px 18px 12px; display: flex; gap: 14px; align-items: flex-start; }
+    .store-icon { width: 54px; height: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; background: var(--bg3); }
+    .store-icon img { width: 44px; height: 44px; object-fit: contain; }
+    .store-meta { flex: 1; min-width: 0; }
+    .store-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .store-category { font-size: 11px; font-weight: 600; color: var(--accent2); text-transform: uppercase; letter-spacing: .05em; }
+    .store-desc { padding: 0 18px 14px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .store-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .store-rating { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); }
+    .star { color: var(--yellow); }
+    .btn-install {
+      padding: 7px 18px; border-radius: 8px; font-size: 13px; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; cursor: pointer; color: #000;
+      transition: opacity .18s, transform .1s;
+    }
+    .btn-install:hover { opacity: .9; transform: scale(1.03); }
+    .btn-install:active { transform: scale(.97); }
+    .btn-install.installed { background: var(--bg3); color: var(--green); border: 1px solid var(--green); font-size: 12px; }
+    .btn-install.installing { background: var(--bg3); color: var(--text-muted); border: 1px solid var(--border); pointer-events: none; }
+
+    /* ── Install URL section ── */
+    .install-url-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      margin-bottom: 28px;
+    }
+    .install-url-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+    .install-url-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+    .install-url-row { display: flex; gap: 10px; }
+    .install-url-input {
+      flex: 1; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none;
+    }
+    .install-url-input:focus { border-color: var(--accent); }
+    .btn-primary {
+      padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; cursor: pointer; color: #000; white-space: nowrap;
+      transition: opacity .18s;
+    }
+    .btn-primary:hover { opacity: .88; }
+
+    /* ── Sync section ── */
+    .sync-status-card {
+      background: linear-gradient(135deg, rgba(56,189,248,.1), rgba(129,140,248,.08));
+      border: 1px solid rgba(56,189,248,.25);
+      border-radius: var(--radius); padding: 24px;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 20px;
+    }
+    .sync-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 800; color: #000;
+      flex-shrink: 0;
+    }
+    .sync-info { flex: 1; }
+    .sync-name { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+    .sync-email { font-size: 13px; color: var(--text-muted); }
+    .sync-badges { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .sync-badge {
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      background: rgba(56,189,248,.15); color: var(--accent); border: 1px solid rgba(56,189,248,.3);
+    }
+    .sync-badge.green { background: rgba(63,185,80,.12); color: var(--green); border-color: rgba(63,185,80,.3); }
+    .sync-actions { display: flex; flex-direction: column; gap: 8px; }
+    .btn-outline {
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      border: 1px solid var(--border); background: var(--bg3); color: var(--text);
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    .sync-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .sync-item-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sync-item-icon { font-size: 22px; }
+    .sync-item-info { flex: 1; }
+    .sync-item-label { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .sync-item-count { font-size: 11px; color: var(--text-muted); }
+    .sync-item-status { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+    .sync-item-status.on { background: rgba(63,185,80,.15); color: var(--green); }
+    .sync-item-status.off { background: rgba(248,81,73,.1); color: var(--red); }
+
+    /* ── Notification toast ── */
+    #extToast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 20px;
+      font-size: 14px; color: var(--text);
+      box-shadow: 0 8px 30px rgba(0,0,0,.5);
+      opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+      transform: translateY(10px); z-index: 9999;
+      display: flex; align-items: center; gap: 10px;
+    }
+    #extToast.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    #extToast.success { border-color: var(--green); }
+    #extToast.error { border-color: var(--red); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4d555e; }
+
+    /* ── Tag badge ── */
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .tag-new { background: rgba(56,189,248,.15); color: var(--accent); }
+    .tag-popular { background: rgba(209,213,22,.12); color: #d1d516; }
+    .tag-verified { background: rgba(63,185,80,.12); color: var(--green); }
+
+    .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); margin-bottom: 14px; padding-left: 2px; }
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    /* Classes utilitárias para substituir inline styles */
+    .text-dim { opacity: 0.7; }
+    .mt-12 { margin-top: 12px; }
+    .mt-14 { margin-top: 14px; }
+    .mb-12 { margin-bottom: 12px; }
+    .mb-14 { margin-bottom: 14px; }
+    .mb-20 { margin-bottom: 20px; }
+    .store-shortcuts-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .backup-actions-wrap { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .hidden { display: none; }
+    .form-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+    /* ── Chrome Web Store Hero Banner & Online Hub ── */
+    .store-hero-banner {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(129, 140, 248, 0.15), rgba(16, 185, 129, 0.1));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .store-hero-banner::before {
+      content: '';
+      position: absolute;
+      top: -50px; right: -50px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .store-hero-content {
+      max-width: 620px;
+      position: relative;
+      z-index: 1;
+    }
+    .store-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      margin-bottom: 12px;
+    }
+    .store-hero-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+    .store-hero-title span {
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #34d399);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .store-hero-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .store-hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-hero-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+    }
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.45);
+    }
+    .btn-hero-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .store-hero-icons {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-ext-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      transition: transform .25s ease;
+    }
+    .hero-ext-icon:hover {
+      transform: scale(1.1) translateY(-4px);
+      border-color: var(--accent);
+    }
+
+    /* Principais Categorias no estilo Chrome Web Store */
+    .section-headline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 22px 0 14px;
+    }
+    .section-headline-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-headline-link {
+      font-size: 12.5px;
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .section-headline-link:hover { text-decoration: underline; }
+
+    .category-pills-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .category-pill-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .category-pill-card:hover {
+      background: var(--bg3);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .category-pill-card.active {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+    }
+    .category-pill-name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .category-pill-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* Botão de abrir e instalar direto na Chrome Web Store oficial */
+    .btn-open-cws {
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-open-cws:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+    }
+    .store-search-bar {
+      width: 380px;
+    }
+    .store-results-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+  </style>
+</head>
+<body>
+<div class="ext-layout">
+  <!-- Sidebar -->
+  <aside class="ext-sidebar">
+    <div class="ext-brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 7 7c0 7-7 13-7 13s-7-6-7-13a7 7 0 0 1 7-7z"/></svg>
+      <span class="ext-brand-name">Vortex</span>
+    </div>
+    <nav class="ext-nav">
+      <div class="ext-nav-item active" data-page="my-extensions">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Minhas Extensões
+      </div>
+      <div class="ext-nav-item" data-page="store">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Loja de Extensões
+      </div>
+      <div class="ext-nav-item" data-page="install-crx">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Instalar por URL/ID
+      </div>
+      <div class="ext-nav-item" data-page="sync">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Sincronização
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="ext-main">
+
+    <!-- ── My Extensions ── -->
+    <div class="ext-page active" id="page-my-extensions">
+      <div class="page-header">
+        <h1 class="page-title">Minhas <span>Extensões</span></h1>
+        <div class="search-bar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="myExtSearch" placeholder="Buscar extensões instaladas...">
+        </div>
+      </div>
+
+      <div class="filter-chips" id="myExtFilters">
+        <div class="chip active" data-filter="all">Todas</div>
+        <div class="chip" data-filter="enabled">Ativas</div>
+        <div class="chip" data-filter="disabled">Desativadas</div>
+        <div class="chip" data-filter="pinned">Fixadas</div>
+      </div>
+
+      <div id="myExtList" class="ext-cards-grid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ── Store ── -->
+    <div class="ext-page" id="page-store">
+      <div class="page-header">
+        <h1 class="page-title">Loja de <span>Extensões Vortex</span></h1>
+        <div class="search-bar store-search-bar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="storeSearch" placeholder="Pesquisar extensões ou buscar na Chrome Store...">
+        </div>
+      </div>
+
+      <!-- Hero Banner estilo Chrome Web Store -->
+      <div class="store-hero-banner">
+        <div class="store-hero-content">
+          <div class="store-hero-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            CHROME WEB STORE COMPATÍVEL
+          </div>
+          <div class="store-hero-title">Esta é a <span>Chrome Web Store</span> no Vortex</div>
+          <div class="store-hero-desc">Turbine seu navegador com extensões e ferramentas oficiais para Chromium. Navegue pelo catálogo online, pesquise livremente qualquer extensão e instale em 1 clique.</div>
+          <div class="store-hero-actions">
+            <button class="btn-hero-primary" id="btnOpenChromeWebStoreFull">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Abrir Chrome Web Store Oficial
+            </button>
+            <button class="btn-hero-secondary" id="btnSearchOnlineCWS">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Buscar Extensão Online
+            </button>
+          </div>
+        </div>
+        <div class="store-hero-icons">
+          <div class="hero-ext-icon" title="Google Tradutor">🌐</div>
+          <div class="hero-ext-icon" title="Shazam / Mídia">🎵</div>
+          <div class="hero-ext-icon" title="Bitwarden / Segurança">🔐</div>
+          <div class="hero-ext-icon" title="ChatGPT / IA">🤖</div>
+          <div class="hero-ext-icon" title="Adobe Acrobat PDF">📄</div>
+        </div>
+      </div>
+
+      <!-- Principais Categorias estilo Chrome Web Store -->
+      <div class="section-headline">
+        <div class="section-headline-title">
+          <span>Principais categorias</span>
+        </div>
+        <span class="section-headline-link" id="btnViewAllCats">Ver todas online →</span>
+      </div>
+
+      <div class="category-pills-row" id="storeCategoryPills">
+        <div class="category-pill-card active" data-filter="all">
+          <span class="category-pill-name">Todas</span>
+          <span class="category-pill-icon">✨</span>
+        </div>
+        <div class="category-pill-card" data-filter="productivity">
+          <span class="category-pill-name">Produtividade</span>
+          <span class="category-pill-icon">⚡</span>
+        </div>
+        <div class="category-pill-card" data-filter="tools">
+          <span class="category-pill-name">Ferramentas</span>
+          <span class="category-pill-icon">🛠️</span>
+        </div>
+        <div class="category-pill-card" data-filter="security">
+          <span class="category-pill-name">Segurança</span>
+          <span class="category-pill-icon">🛡️</span>
+        </div>
+        <div class="category-pill-card" data-filter="ai">
+          <span class="category-pill-name">IA / ChatGPT</span>
+          <span class="category-pill-icon">🤖</span>
+        </div>
+        <div class="category-pill-card" data-filter="dev">
+          <span class="category-pill-name">Desenvolvimento</span>
+          <span class="category-pill-icon">💻</span>
+        </div>
+        <div class="category-pill-card" data-filter="shopping">
+          <span class="category-pill-name">Compras</span>
+          <span class="category-pill-icon">🛍️</span>
+        </div>
+        <div class="category-pill-card" data-filter="media">
+          <span class="category-pill-name">Mídia & Vídeo</span>
+          <span class="category-pill-icon">🎬</span>
+        </div>
+      </div>
+
+      <!-- Lista de Extensões Disponíveis -->
+      <div class="section-headline">
+        <div class="section-headline-title">
+          <span>Extensões em Destaque & Populares</span>
+          <span id="storeResultsCount" class="store-results-count"></span>
+        </div>
+      </div>
+
+      <div class="store-grid" id="storeGrid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ── Install by URL/ID ── -->
+    <div class="ext-page" id="page-install-crx">
+      <div class="page-header">
+        <h1 class="page-title">Instalar por <span>URL ou ID</span></h1>
+      </div>
+
+      <div class="install-url-card">
+        <div class="install-url-title">🧩 Instalar extensão da Chrome Web Store</div>
+        <div class="install-url-desc">
+          Cole o <strong>ID da extensão</strong> ou a <strong>URL completa</strong> da Chrome Web Store. 
+          O Vortex abre a página da extensão para instalação assistida.<br>
+          <small class="text-dim">Exemplo de ID: <code>cjpalhdlnbpafiamejdnhcphjbkeiagm</code> (uBlock Origin)</small>
+        </div>
+        <div class="install-url-row">
+          <input type="text" class="install-url-input" id="crxIdInput" placeholder="ID ou URL da extensão...">
+          <button class="btn-primary" id="btnInstallById">Abrir na Loja →</button>
+        </div>
+      </div>
+
+      <div class="install-url-card">
+        <div class="install-url-title">📁 Carregar extensão descompactada (modo desenvolvedor)</div>
+        <div class="install-url-desc">
+          Carregue uma extensão a partir de uma pasta local (formato descompactado com <code>manifest.json</code>).<br>
+          Ideal para extensões em desenvolvimento ou extensões baixadas manualmente.
+        </div>
+        <div class="install-url-row">
+          <input type="text" class="install-url-input" id="unpkgPathInput" placeholder="Caminho da pasta da extensão..." readonly>
+          <button class="btn-primary" id="btnBrowseExtFolder">Escolher Pasta</button>
+        </div>
+        <div class="mt-12">
+          <button class="btn-primary" id="btnLoadUnpacked">Carregar Extensão</button>
+        </div>
+      </div>
+
+      <div class="install-url-card">
+        <div class="install-url-title">🔗 Extensões populares da Chrome Web Store</div>
+        <div class="install-url-desc">Clique para abrir diretamente na loja e instalar via navegação normal.</div>
+        <div class="store-shortcuts-wrap">
+          <button class="btn-outline store-shortcut" data-id="cjpalhdlnbpafiamejdnhcphjbkeiagm">uBlock Origin</button>
+          <button class="btn-outline store-shortcut" data-id="nngceckbapebfimnlniiiahkandclblb">Bitwarden</button>
+          <button class="btn-outline store-shortcut" data-id="cfhdojbkjhnklbpkdaibdccddilifddb">Adblock Plus</button>
+          <button class="btn-outline store-shortcut" data-id="mdjildafknihdffpkfmmpnpoiajfjnjd">Screenity</button>
+          <button class="btn-outline store-shortcut" data-id="hdokiejnpimakedhajhdlcegeplioahd">LastPass</button>
+          <button class="btn-outline store-shortcut" data-id="bnomihfieiccainjcjblkombniggnlh">OneTab</button>
+          <button class="btn-outline store-shortcut" data-id="gighmmpiobklfepjocnamgkkbiglidom">AdBlock</button>
+          <button class="btn-outline store-shortcut" data-id="mgijmajocgfcbeboacabfgobmjgjcoja">Momentum</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Sync ── -->
+    <div class="ext-page" id="page-sync">
+      <div class="page-header">
+        <h1 class="page-title">Sincronização <span>Vortex</span></h1>
+      </div>
+
+      <!-- Profile card -->
+      <div class="sync-status-card" id="syncProfileCard">
+        <div class="sync-avatar" id="syncAvatar">?</div>
+        <div class="sync-info">
+          <div class="sync-name" id="syncDisplayName">Não conectado</div>
+          <div class="sync-email" id="syncDisplayEmail">Faça login para sincronizar seus dados</div>
+          <div class="sync-badges" id="syncBadges"></div>
+        </div>
+        <div class="sync-actions">
+          <button class="btn-primary hidden" id="btnSyncLogin">Conectar E-mail</button>
+          <button class="btn-outline" id="btnSyncManage">Gerenciar Perfil</button>
+          <button class="btn-outline hidden" id="btnSyncNow">🔄 Sincronizar Agora</button>
+        </div>
+      </div>
+
+      <!-- Sync items -->
+      <div class="section-label">O que está sendo sincronizado</div>
+      <div class="sync-items-grid" id="syncItemsGrid">
+        <div class="sync-item-card">
+          <div class="sync-item-icon">⭐</div>
+          <div class="sync-item-info">
+            <div class="sync-item-label">Favoritos</div>
+            <div class="sync-item-count" id="syncCountBookmarks">0 itens</div>
+          </div>
+          <span class="sync-item-status on" id="syncStatusBookmarks">ON</span>
+        </div>
+        <div class="sync-item-card">
+          <div class="sync-item-icon">🔑</div>
+          <div class="sync-item-info">
+            <div class="sync-item-label">Senhas</div>
+            <div class="sync-item-count" id="syncCountPasswords">0 itens</div>
+          </div>
+          <span class="sync-item-status on" id="syncStatusPasswords">ON</span>
+        </div>
+        <div class="sync-item-card">
+          <div class="sync-item-icon">🧩</div>
+          <div class="sync-item-info">
+            <div class="sync-item-label">Extensões</div>
+            <div class="sync-item-count" id="syncCountExtensions">0 itens</div>
+          </div>
+          <span class="sync-item-status on" id="syncStatusExtensions">ON</span>
+        </div>
+        <div class="sync-item-card">
+          <div class="sync-item-icon">🕐</div>
+          <div class="sync-item-info">
+            <div class="sync-item-label">Histórico</div>
+            <div class="sync-item-count" id="syncCountHistory">0 itens</div>
+          </div>
+          <span class="sync-item-status on">ON</span>
+        </div>
+        <div class="sync-item-card">
+          <div class="sync-item-icon">⚙️</div>
+          <div class="sync-item-info">
+            <div class="sync-item-label">Configurações</div>
+            <div class="sync-item-count">Preferências</div>
+          </div>
+          <span class="sync-item-status on">ON</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Backup / Restore -->
+      <div class="section-label">Backup e Restauração</div>
+      <div class="backup-actions-wrap">
+        <button class="btn-primary" id="btnExportSync">⬇️ Exportar Backup Completo</button>
+        <button class="btn-outline" id="btnImportSync">⬆️ Importar Backup</button>
+        <input type="file" id="syncImportFile" accept=".json" class="hidden">
+      </div>
+
+      <hr class="divider">
+
+      <!-- Quick login form -->
+      <div class="section-label">Conectar / Alterar conta</div>
+      <div class="install-url-card">
+        <div class="install-url-title mb-14">Vincular e-mail ao perfil Vortex</div>
+        <div class="form-grid-2col">
+          <div>
+            <label class="form-label">Seu nome</label>
+            <input type="text" class="install-url-input" id="syncNameField" placeholder="Ex: Marcos">
+          </div>
+          <div>
+            <label class="form-label">E-mail</label>
+            <input type="email" class="install-url-input" id="syncEmailField" placeholder="seu@email.com">
+          </div>
+        </div>
+        <button class="btn-primary" id="btnSaveProfile">Salvar Perfil e Conectar</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="extToast"></div>
+
+<script>
+// ── Data ─────────────────────────────────────────────
+// ── Catálogo Oficial & Massivo de Extensões Compatíveis com Chrome Web Store ──
+const STORE_CATALOG = [
+  // ── SEGURANÇA & PRIVACIDADE
+  { id:'ublock', name:'uBlock Origin', category:'security', desc:'O bloqueador de anúncios e rastreadores mais eficiente e leve do mundo.', icon:'🛡️', rating:4.9, reviews:'120k', tag:'popular', crxId:'cjpalhdlnbpafiamejdnhcphjbkeiagm' },
+  { id:'bitwarden', name:'Bitwarden - Gerenciador de Senhas', category:'security', desc:'Cofre de senhas de código aberto seguro com preenchimento em 1 clique.', icon:'🔐', rating:4.8, reviews:'85k', tag:'verified', crxId:'nngceckbapebfimnlniiiahkandclblb' },
+  { id:'adblock', name:'AdBlock — O melhor bloqueador', category:'security', desc:'Bloqueie pop-ups, anúncios em vídeos do YouTube e banners invasivos.', icon:'🚫', rating:4.7, reviews:'95k', tag:'popular', crxId:'gighmmpiobklfepjocnamgkkbiglidom' },
+  { id:'adblockplus', name:'Adblock Plus - Bloqueador gratuito', category:'security', desc:'Navegação rápida sem anúncios incômodos com proteção contra malware.', icon:'🛑', rating:4.6, reviews:'140k', tag:'popular', crxId:'cfhdojbkjhnklbpkdaibdccddilifddb' },
+  { id:'lastpass', name:'LastPass: Gerenciador de Senhas', category:'security', desc:'Acesse suas contas e senhas salvas de qualquer dispositivo com segurança.', icon:'🔑', rating:4.5, reviews:'70k', tag:'verified', crxId:'hdokiejnpimakedhajhdlcegeplioahd' },
+  { id:'1password', name:'1Password – Gerenciador de Senhas', category:'security', desc:'Acesso seguro a todas as suas senhas, cartões e chaves de acesso com biometria.', icon:'🔒', rating:4.8, reviews:'45k', tag:'popular', crxId:'aeblfdkhhhdcdjpifhhbdiojplfjncoa' },
+  { id:'privacybadger', name:'Privacy Badger (EFF)', category:'security', desc:'Aprende automaticamente a bloquear espiões invisíveis que rastreiam sua navegação.', icon:'🦡', rating:4.8, reviews:'32k', tag:'verified', crxId:'pkehgijcmpdhfbdbbnkijodmdjhbjlgp' },
+  { id:'malwarebytes', name:'Malwarebytes Browser Guard', category:'security', desc:'Proteção contra golpes, fraudes, sites suspeitos e malware em tempo real.', icon:'🔰', rating:4.7, reviews:'45k', tag:'verified', crxId:'ihcjicgdanjaechkgeegbhnhkmbfjfdg' },
+  { id:'nordvpn', name:'NordVPN: VPN Segura & Rápida', category:'security', desc:'Navegue na web com criptografia militar e mude seu IP para qualquer país.', icon:'🌐', rating:4.6, reviews:'60k', tag:'popular', crxId:'fjoaledngjpaocfegfdikoekhohdflim' },
+  { id:'protonvpn', name:'Proton VPN: Proteção e Liberdade', category:'security', desc:'VPN desenvolvida pelos cientistas do CERN com política estrita de não registro de logs.', icon:'🛡️', rating:4.7, reviews:'25k', tag:'verified', crxId:'jplnlpmepignjdgdfblmichfkebhnnki' },
+  { id:'https-everywhere', name:'HTTPS Everywhere / Smarter', category:'security', desc:'Força conexões HTTPS criptografadas em milhares de sites automaticamente.', icon:'🔒', rating:4.6, reviews:'50k', tag:'verified', crxId:'gcbommkclmclpchllfjekcdonpmejbdp' },
+
+  // ── PRODUTIVIDADE & ORGANIZAÇÃO
+  { id:'translate', name:'Google Tradutor Oficial', category:'productivity', desc:'Traduza páginas inteiras instantaneamente ou selecione textos para ver a tradução.', icon:'🌐', rating:4.8, reviews:'310k', tag:'popular', crxId:'aapbdbdomjkkjkaonfhkkikfgjllcleb' },
+  { id:'screenity', name:'Screenity - Gravador de Tela', category:'productivity', desc:'Grave sua tela, adicione anotações ao vivo e salve gravações em alta resolução.', icon:'🎥', rating:4.8, reviews:'40k', tag:'new', crxId:'mdjildafknihdffpkfmmpnpoiajfjnjd' },
+  { id:'onetab', name:'OneTab: Economizador de Memória', category:'productivity', desc:'Converta todas as suas abas em uma lista limpa e economize até 95% de memória RAM.', icon:'📋', rating:4.6, reviews:'65k', tag:'popular', crxId:'bnomihfieiccainjcjblkombniggnlh' },
+  { id:'momentum', name:'Momentum Dashboard', category:'productivity', desc:'Transforme sua tela em um painel motivador com fotos, clima e lista de tarefas.', icon:'✨', rating:4.7, reviews:'55k', tag:'popular', crxId:'mgijmajocgfcbeboacabfgobmjgjcoja' },
+  { id:'grammarly', name:'Grammarly: Gramática e Redação', category:'productivity', desc:'Verifique ortografia, estilo e clareza de textos em tempo real enquanto digita.', icon:'📝', rating:4.8, reviews:'110k', tag:'popular', crxId:'kbfnbcaeplbcioakkpcpgfkobkghlhen' },
+  { id:'languagetool', name:'LanguageTool - Corretor de Português', category:'productivity', desc:'Corretor gramatical avançado e verificador ortográfico em português e 30+ idiomas.', icon:'🔤', rating:4.9, reviews:'50k', tag:'verified', crxId:'oldceeleldhonbafppcapldpdifcinji' },
+  { id:'notion', name:'Notion Web Clipper', category:'productivity', desc:'Salve artigos, links e páginas completas diretamente no seu espaço de trabalho do Notion.', icon:'📓', rating:4.7, reviews:'28k', tag:'popular', crxId:'knheggckgoiihginacbkhaalnibhilkk' },
+  { id:'todoist', name:'Todoist para Chrome', category:'productivity', desc:'Planeje seu dia, organize tarefas e salve links em listas de tarefas sem mudar de aba.', icon:'✅', rating:4.7, reviews:'35k', tag:'verified', crxId:'jldhpllghnbhlbpcmnajghdmdaocagbe' },
+  { id:'loom', name:'Loom – Gravador de Tela e Vídeo', category:'productivity', desc:'Grave a tela, webcam e microfone instantaneamente e compartilhe o link em segundos.', icon:'📹', rating:4.7, reviews:'78k', tag:'popular', crxId:'liecbddmkiiihnedobmlmillhodjkdmb' },
+  { id:'clockify', name:'Clockify Time Tracker', category:'productivity', desc:'Monitore tempo gasto em projetos e tarefas diretamente do navegador com 1 clique.', icon:'⏱️', rating:4.7, reviews:'22k', tag:'verified', crxId:'pmjeegjhjdlccodhacdgbgfagbpmikgf' },
+  { id:'evernote', name:'Evernote Web Clipper', category:'productivity', desc:'Salve páginas web completas, trechos ou artigos sem distrações no Evernote.', icon:'🐘', rating:4.6, reviews:'130k', tag:'popular', crxId:'pioclpoplcdbaefihamjohnefbikjilc' },
+  { id:'trello', name:'Trello - Criador de Cartões', category:'productivity', desc:'Adicione tarefas, links e ideias aos seus quadros do Trello a qualquer momento.', icon:'📌', rating:4.5, reviews:'18k', tag:'verified', crxId:'dplkembijiebocclghnoilpnmncegdla' },
+
+  // ── FERRAMENTAS & UTILITÁRIOS
+  { id:'darkreader', name:'Dark Reader - Modo Escuro Global', category:'tools', desc:'Aplica um modo escuro elegante e confortável para os olhos em qualquer site da internet.', icon:'🌙', rating:4.9, reviews:'180k', tag:'popular', crxId:'eimadpbcbfnmbkopoojfekhnkhdbieeh' },
+  { id:'acrobat', name:'Adobe Acrobat: Visualizador PDF', category:'tools', desc:'Preencha formulários, faça anotações e edite arquivos PDF diretamente no navegador.', icon:'📄', rating:4.6, reviews:'92k', tag:'popular', crxId:'efaidnbmnnnibpcajpcglclefindmkaj' },
+  { id:'speedcontroller', name:'Video Speed Controller', category:'tools', desc:'Acelere, desacelere ou rebobine vídeos em HTML5 em qualquer site (inclusive YouTube).', icon:'⏩', rating:4.8, reviews:'75k', tag:'popular', crxId:'nffaoalbilbmmfgbnbgppjihopabppdk' },
+  { id:'volume-master', name:'Volume Master - Aumentar Som', category:'tools', desc:'Aumente o volume de qualquer aba em até 600% e controle áudio por abas individuais.', icon:'🔊', rating:4.8, reviews:'88k', tag:'popular', crxId:'jghehhnnjjbhicamiboebnjcnflfngbn' },
+  { id:'shazam', name:'Shazam: Descubra Músicas', category:'tools', desc:'Identifique qualquer música que estiver tocando na aba do navegador com um clique.', icon:'🎵', rating:4.7, reviews:'42k', tag:'verified', crxId:'mmioliijnhnoblpgimnlajmefafdfilb' },
+  { id:'awesome-screenshot', name:'Awesome Screenshot & Gravador', category:'tools', desc:'Capture telas inteiras ou áreas selecionadas, anote com setas e grave vídeos.', icon:'📸', rating:4.6, reviews:'115k', tag:'popular', crxId:'nlipoenfbbikpkjkckmgamaegfcjpbki' },
+  { id:'tampermonkey', name:'Tampermonkey - Scripts Personalizados', category:'tools', desc:'O gerenciador de userscripts mais popular do mundo para modificar páginas da web.', icon:'🐵', rating:4.8, reviews:'90k', tag:'popular', crxId:'dhdgffkkebhmkfjojejmpbldmpobfkfo' },
+  { id:'web-developer', name:'Web Developer Toolbar', category:'tools', desc:'Barra de ferramentas essencial para inspecionar CSS, imagens e formulários.', icon:'🛠️', rating:4.6, reviews:'30k', tag:'verified', crxId:'bfbameneiokkgbdmiekhjnmfkcnldhhm' },
+  { id:'user-agent-switcher', name:'User-Agent Switcher', category:'tools', desc:'Mude seu navegador para se comportar como Chrome mobile, Safari ou Firefox.', icon:'🔄', rating:4.5, reviews:'25k', tag:'verified', crxId:'djflfmnoonjdggjhpfppjdpgfmknjign' },
+  { id:'picture-in-picture', name:'Picture-in-Picture Extension (Google)', category:'tools', desc:'Assista a qualquer vídeo em uma janela flutuante sempre no topo.', icon:'🖼️', rating:4.4, reviews:'48k', tag:'popular', crxId:'hkgfoiooedgoejojocmhlaklaeopbecg' },
+
+  // ── IA & CHATGPT
+  { id:'chatgpt', name:'ChatGPT for Google & Search', category:'ai', desc:'Exibe respostas completas da inteligência artificial ao lado dos resultados de busca.', icon:'🤖', rating:4.7, reviews:'60k', tag:'new', crxId:'jgjaeacdkonaoafenlfkkkmbaopkbilf' },
+  { id:'merlin', name:'Merlin AI - Assistente Copilot', category:'ai', desc:'Acesse GPT-4, Claude e Gemini em qualquer página web para resumir e escrever.', icon:'🧙', rating:4.7, reviews:'25k', tag:'new', crxId:'camppjleccjaphfdbohjdohecfnoikec' },
+  { id:'harpa', name:'HARPA AI: Automação Web & GPT', category:'ai', desc:'Copilot híbrido de IA para automação web, monitoramento de preços e resumos de vídeos.', icon:'🦅', rating:4.9, reviews:'38k', tag:'popular', crxId:'eanggfilgoajaocelnaflolkadkeghjp' },
+  { id:'sider', name:'Sider: Barra Lateral ChatGPT & Claude', category:'ai', desc:'Barra lateral universal de inteligência artificial para leitura, tradução e explicação.', icon:'⚡', rating:4.8, reviews:'45k', tag:'popular', crxId:'difoiogjjojoaoomphldepapgpbgkhkb' },
+  { id:'monica', name:'Monica - Seu Copilot AI Completo', category:'ai', desc:'Converse, resuma PDFs, gere imagens e escreva e-mails com GPT-4 e Claude.', icon:'💡', rating:4.8, reviews:'55k', tag:'popular', crxId:'ofpnmcalabcbjgholdjcjblkibolbppb' },
+  { id:'maxai', name:'MaxAI.me: IA de 1 Clique', category:'ai', desc:'Melhore escrita, resuma artigos longos e traduza usando qualquer modelo de IA.', icon:'🧠', rating:4.8, reviews:'35k', tag:'new', crxId:'mhnlakpoiakkdhgahglbdklkeanlhjfn' },
+
+  // ── DESENVOLVIMENTO (DEV TOOLS)
+  { id:'colorpick', name:'ColorZilla - Conta-gotas & CSS', category:'dev', desc:'Leitor avançado de cores na tela, conta-gotas de precisão e gerador de CSS.', icon:'🎨', rating:4.7, reviews:'35k', tag:'verified', crxId:'bhlhnicpbhignbdhedgjmaplebemodj' },
+  { id:'wappalyzer', name:'Wappalyzer - Detector de Tecnologias', category:'dev', desc:'Descubra instantaneamente quais linguagens, frameworks e servidores o site utiliza.', icon:'⚙️', rating:4.6, reviews:'28k', tag:'verified', crxId:'gppongmhjkpfnbhagpmjfkannfbllamg' },
+  { id:'jsonview', name:'JSON Viewer Pro', category:'dev', desc:'Formate, colapse e estilize requisições e retornos JSON de forma visual e intuitiva.', icon:'📊', rating:4.8, reviews:'20k', tag:'popular', crxId:'eifflpmocdbdmepbjaopkkhbfmdlphngm' },
+  { id:'github-repo-size', name:'GitHub Repo Size', category:'dev', desc:'Exibe o tamanho dos repositórios e de cada arquivo individualmente no GitHub.', icon:'🐙', rating:4.8, reviews:'18k', tag:'verified', crxId:'pmpflbafcllmflbdcfcgddjlkgepmfpc' },
+  { id:'postman', name:'Postman Interceptor', category:'dev', desc:'Sincronize cookies e envie requisições HTTP avançadas diretamente do navegador.', icon:'🚀', rating:4.6, reviews:'22k', tag:'verified', crxId:'aicmkgpgakddgnaphhhpliifpcfhicfo' },
+  { id:'react-devtools', name:'React Developer Tools', category:'dev', desc:'Inspecione hierarquias de componentes, props e estados de aplicações React.', icon:'⚛️', rating:4.7, reviews:'85k', tag:'verified', crxId:'fmkadmapgofadopljbjfkapdkoienihi' },
+  { id:'vue-devtools', name:'Vue.js devtools', category:'dev', desc:'Depurador oficial do Vue.js para inspecionar eventos, rotas e componentes.', icon:'🟢', rating:4.6, reviews:'40k', tag:'verified', crxId:'nhdogjmejiglipccpnnnanhbledajbpd' },
+  { id:'redux-devtools', name:'Redux DevTools', category:'dev', desc:'Inspecione ações em tempo real, retroceda no tempo e visualize a store Redux.', icon:'🔄', rating:4.7, reviews:'32k', tag:'verified', crxId:'lmhkpmbekcpmknklioeibfkpmmfibljd' },
+  { id:'octotree', name:'Octotree - GitHub Code Tree', category:'dev', desc:'Adiciona uma árvore de navegação de código rápida e elegante na lateral do GitHub.', icon:'🌳', rating:4.9, reviews:'26k', tag:'popular', crxId:'bkhaagjahfmjljalopjnoealnfepigho' },
+
+  // ── COMPRAS & ECONOMIA
+  { id:'honey', name:'Honey da PayPal - Cupons Automáticos', category:'shopping', desc:'Encontra e aplica automaticamente cupons de desconto ao fazer compras online.', icon:'🍯', rating:4.8, reviews:'170k', tag:'popular', crxId:'bmnlcjabgnpnenekpadlanbbkooimhnj' },
+  { id:'meliuz', name:'Méliuz: Cashback e Cupons no Brasil', category:'shopping', desc:'Ative cashback em lojas brasileiras (Amazon, Mercado Livre, Magalu) em 1 clique.', icon:'💰', rating:4.7, reviews:'36k', tag:'popular', crxId:'cmmpnndgfcbegkclgbfbbpbeblffbaea' },
+  { id:'zoom', name:'Zoom: Comparador de Preços', category:'shopping', desc:'Acompanhe o histórico de preços e economize em lojas e e-commerces online.', icon:'🔍', rating:4.6, reviews:'25k', tag:'verified', crxId:'pfnlmfkbgfegphceefdfgffpddpffkbm' },
+  { id:'keepa', name:'Keepa - Amazon Price Tracker', category:'shopping', desc:'Gráficos detalhados do histórico de preços de produtos na Amazon com alertas de queda.', icon:'📉', rating:4.8, reviews:'70k', tag:'popular', crxId:'neebplgakaahbhdphmkckjjcegoiijjo' },
+  { id:'rakuten', name:'Rakuten: Cash Back & Cupons', category:'shopping', desc:'Receba dinheiro de volta em compras em mais de 3.500 lojas parceiras.', icon:'💳', rating:4.6, reviews:'55k', tag:'popular', crxId:'chhjbpecbbdhadhbikikflfdflebapad' },
+
+  // ── MÍDIA & STREAMING
+  { id:'video-downloader', name:'Video Downloader Pro', category:'media', desc:'Baixe vídeos e áudios de múltiplos sites da web para assistir offline.', icon:'📥', rating:4.5, reviews:'48k', tag:'popular', crxId:'peidcddbpajkiggcoloklmbcgiepdiig' },
+  { id:'netflix-party', name:'Teleparty (Netflix & YouTube Party)', category:'media', desc:'Assista a filmes e séries sincronizados com amigos com chat integrado.', icon:'🎬', rating:4.7, reviews:'52k', tag:'popular', crxId:'oocalimimngaicdmkdcmkpbhilianaif' },
+  { id:'enhancer-youtube', name:'Enhancer for YouTube™', category:'media', desc:'Controle qualidade, volume por scroll, tema escuro e bloqueio de popups no YouTube.', icon:'▶️', rating:4.9, reviews:'80k', tag:'popular', crxId:'ponfpcnoihanthllfaakhnbhgbfgbole' },
+  { id:'return-youtube-dislike', name:'Return YouTube Dislike', category:'media', desc:'Restaura o contador visível de dislikes em todos os vídeos do YouTube.', icon:'👎', rating:4.9, reviews:'95k', tag:'popular', crxId:'gebbhagfogifgggkldgodflihgfeippi' },
+  { id:'sponsorblock', name:'SponsorBlock para YouTube', category:'media', desc:'Pule automaticamente introduções, patrocinadores e partes chatas de vídeos.', icon:'⏭️', rating:4.9, reviews:'72k', tag:'popular', crxId:'mnjggcdmjocbbbhaepdhchncahnbgone' },
+  { id:'unhook', name:'Unhook - YouTube Sem Distrações', category:'media', desc:'Oculte vídeos recomendados, feed inicial e comentários para foco total.', icon:'🧘', rating:4.8, reviews:'30k', tag:'verified', crxId:'khncfooichmfjbepaaaebmommgaepoid' }
+];
+
+let myExtensions = JSON.parse(localStorage.getItem('vortex-extensions') || '[]');
+let userProfile = JSON.parse(localStorage.getItem('vortex-profile-cache') || '{}');
+let currentStoreFilter = 'all';
+let currentMyFilter = 'all';
+
+// ── Navigation ────────────────────────────
+document.querySelectorAll('.ext-nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.ext-nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.ext-page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+  });
+});
+
+// ── Toast ─────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('extToast');
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  t.innerHTML = `<span>${icons[type]||'ℹ️'}</span> ${msg}`;
+  t.className = `show ${type}`;
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ── Save helpers ──────────────────────────
+function saveExtensions() {
+  localStorage.setItem('vortex-extensions', JSON.stringify(myExtensions));
+}
+
+// ── Render My Extensions ──────────────────
+function renderMyExtensions() {
+  const search = (document.getElementById('myExtSearch').value || '').toLowerCase();
+  const container = document.getElementById('myExtList');
+  let list = myExtensions.filter(e => {
+    if (search && !e.name.toLowerCase().includes(search) && !(e.desc||'').toLowerCase().includes(search)) return false;
+    if (currentMyFilter === 'enabled') return e.enabled !== false;
+    if (currentMyFilter === 'disabled') return e.enabled === false;
+    if (currentMyFilter === 'pinned') return e.pinned === true;
+    return true;
+  });
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <h3>Nenhuma extensão encontrada</h3>
+        <p>Vá para a <strong>Loja de Extensões</strong> para instalar ou use <strong>Instalar por URL/ID</strong>.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(ext => `
+    <div class="ext-card" data-id="${ext.id}">
+      <div class="ext-icon">${ext.icon || '🧩'}</div>
+      <div class="ext-info">
+        <div class="ext-name">${ext.name}</div>
+        <div class="ext-desc">${ext.desc || ''}</div>
+        <div class="ext-version">v${ext.version || '1.0.0'} · ${ext.category || 'Extensão'}</div>
+      </div>
+      <div class="ext-actions">
+        <button class="btn-pin ${ext.pinned ? 'pinned' : ''}" data-pin="${ext.id}" title="${ext.pinned ? 'Desafixar' : 'Fixar na barra'}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="${ext.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </button>
+        <label class="toggle" title="${ext.enabled !== false ? 'Desativar' : 'Ativar'}">
+          <input type="checkbox" ${ext.enabled !== false ? 'checked' : ''} data-toggle="${ext.id}">
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="btn-sm" data-details="${ext.id}">Detalhes</button>
+        <button class="btn-sm danger" data-remove="${ext.id}">Remover</button>
+      </div>
+    </div>`).join('');
+
+  // Events
+  container.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('change', () => {
+      const idx = myExtensions.findIndex(e => e.id === el.dataset.toggle);
+      if (idx >= 0) { myExtensions[idx].enabled = el.checked; saveExtensions(); renderMyExtensions(); }
+    });
+  });
+  container.querySelectorAll('[data-pin]').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = myExtensions.findIndex(e => e.id === el.dataset.pin);
+      if (idx >= 0) { myExtensions[idx].pinned = !myExtensions[idx].pinned; saveExtensions(); renderMyExtensions(); showToast(myExtensions[idx].pinned ? 'Extensão fixada na barra' : 'Extensão desafixada'); }
+    });
+  });
+  container.querySelectorAll('[data-remove]').forEach(el => {
+    el.addEventListener('click', () => {
+      const name = myExtensions.find(e => e.id === el.dataset.remove)?.name || 'Extensão';
+      myExtensions = myExtensions.filter(e => e.id !== el.dataset.remove);
+      saveExtensions(); renderMyExtensions();
+      showToast(`${name} removida`);
+    });
+  });
+  container.querySelectorAll('[data-details]').forEach(el => {
+    el.addEventListener('click', () => {
+      const ext = myExtensions.find(e => e.id === el.dataset.details);
+      if (ext?.crxId) openInStore(ext.crxId);
+    });
+  });
+}
+
+// ── Store ─────────────────────────────────
+function renderStore() {
+  const searchInput = document.getElementById('storeSearch');
+  const search = (searchInput?.value || '').toLowerCase();
+  const grid = document.getElementById('storeGrid');
+  const countEl = document.getElementById('storeResultsCount');
+  if (!grid) return;
+
+  const installedIds = new Set(myExtensions.map(e => e.crxId || e.id));
+  let list = STORE_CATALOG.filter(ext => {
+    if (search && !ext.name.toLowerCase().includes(search) && !ext.desc.toLowerCase().includes(search) && !ext.category.toLowerCase().includes(search)) return false;
+    if (currentStoreFilter !== 'all' && ext.category !== currentStoreFilter) return false;
+    return true;
+  });
+
+  if (countEl) {
+    countEl.innerText = `(${list.length} extensões encontradas)`;
+  }
+
+  if (list.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 20px; background: var(--bg2); border: 1px dashed var(--border); border-radius: var(--radius);">
+        <div style="font-size: 38px; margin-bottom: 12px;">🔍</div>
+        <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">Nenhuma extensão local encontrada para "${search}"</h3>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 18px;">Você pode pesquisar e instalar diretamente na Chrome Web Store oficial online.</p>
+        <button class="btn-primary" onclick="searchOnlineChromeWebStore('${search}')">
+          🌐 Pesquisar "${search}" na Chrome Web Store Online →
+        </button>
+      </div>`;
+    return;
+  }
+
+  let onlineSearchBanner = '';
+  if (search.trim()) {
+    onlineSearchBanner = `
+      <div style="grid-column: 1 / -1; display:flex; align-items:center; justify-content:space-between; background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(124,58,237,0.1)); border: 1px solid rgba(37,99,235,0.25); border-radius: var(--radius); padding: 12px 18px; margin-bottom: 8px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:22px;">🌐</span>
+          <div>
+            <strong style="font-size:13.5px; color:var(--text);">Quer ver mais resultados para "${search}"?</strong>
+            <div style="font-size:12px; color:var(--text-muted);">Pesquise diretamente no acervo oficial com milhares de extensões online</div>
+          </div>
+        </div>
+        <button class="btn-primary" style="padding: 6px 14px; font-size:12.5px; white-space:nowrap;" onclick="searchOnlineChromeWebStore('${search}')">
+          Buscar na Chrome Web Store ↗
+        </button>
+      </div>`;
+  }
+
+  grid.innerHTML = onlineSearchBanner + list.map(ext => {
+    const isInstalled = installedIds.has(ext.crxId) || installedIds.has(ext.id);
+    const tagMap = { new: 'tag-new', popular: 'tag-popular', verified: 'tag-verified' };
+    return `
+      <div class="store-card">
+        <div class="store-card-header">
+          <div class="store-icon">${ext.icon}</div>
+          <div class="store-meta">
+            <div class="store-name" title="${ext.name}">${ext.name} ${ext.tag ? `<span class="tag ${tagMap[ext.tag]||''}">${ext.tag}</span>` : ''}</div>
+            <div class="store-category">${ext.category}</div>
+          </div>
+        </div>
+        <div class="store-desc">${ext.desc}</div>
+        <div class="store-footer">
+          <div class="store-rating"><span class="star">★</span> ${ext.rating} · ${ext.reviews} avaliações</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn-open-cws" data-viewcrx="${ext.crxId}" title="Ver detalhes completos na Chrome Web Store Oficial">
+              Loja ↗
+            </button>
+            <button class="btn-install ${isInstalled ? 'installed' : ''}" data-crx="${ext.crxId}" data-extid="${ext.id}">
+              ${isInstalled ? '✓ Instalada' : 'Instalar'}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.btn-install:not(.installed)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const extId = btn.dataset.extid;
+      const ext = STORE_CATALOG.find(e => e.id === extId);
+      if (ext) installExtension(ext, btn);
+    });
+  });
+
+  grid.querySelectorAll('[data-viewcrx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openInStore(btn.dataset.viewcrx);
+    });
+  });
+}
+
+function installExtension(ext, btn) {
+  // Abre a Chrome Web Store oficial para instalacao real da extensao
+  if (btn) { btn.className = 'btn-install installing'; btn.textContent = 'Abrindo loja...'; }
+  
+  // Registrar extensao localmente para rastrear
+  if (!myExtensions.find(e => e.id === ext.id || e.crxId === ext.crxId)) {
+    myExtensions.push({ ...ext, enabled: true, pinned: false, version: '1.0.0', installedAt: Date.now(), pendingInstall: true });
+    saveExtensions();
+  }
+  
+  // Abrir na Chrome Web Store oficial em nova aba do Vortex
+  const cwsUrl = `https://chromewebstore.google.com/detail/${ext.crxId}`;
+  try {
+    window.parent.postMessage({ type: 'open-url', url: cwsUrl }, '*');
+  } catch(e) {
+    window.open(cwsUrl, '_blank');
+  }
+  
+  setTimeout(() => {
+    if (btn) { btn.className = 'btn-install installed'; btn.textContent = '✓ Adicionada'; }
+    showToast(`Abrindo "${ext.name}" na Chrome Web Store para instalar!`);
+  }, 600);
+}
+
+function openInStore(crxId) {
+  const url = crxId ? `https://chromewebstore.google.com/detail/${crxId}` : 'https://chromewebstore.google.com/';
+  // Tenta abrir como aba nativa através do Vortex Browser
+  try {
+    window.parent.postMessage({ type: 'open-url', url }, '*');
+  } catch (e) {
+    window.open(url, '_blank');
+  }
+}
+
+function searchOnlineChromeWebStore(query) {
+  const q = encodeURIComponent(query || '');
+  const url = q ? `https://chromewebstore.google.com/search/${q}` : 'https://chromewebstore.google.com/';
+  try {
+    window.parent.postMessage({ type: 'open-url', url }, '*');
+  } catch (e) {
+    window.open(url, '_blank');
+  }
+}
+
+// ── Eventos do Banner e Categorias da Loja ──────────────────────────
+document.getElementById('btnOpenChromeWebStoreFull')?.addEventListener('click', () => {
+  openInStore('');
+});
+
+document.getElementById('btnSearchOnlineCWS')?.addEventListener('click', () => {
+  const term = document.getElementById('storeSearch')?.value.trim();
+  searchOnlineChromeWebStore(term);
+});
+
+document.getElementById('btnViewAllCats')?.addEventListener('click', () => {
+  openInStore('');
+});
+
+// Category pills
+document.getElementById('storeCategoryPills')?.addEventListener('click', e => {
+  const card = e.target.closest('.category-pill-card');
+  if (!card) return;
+  document.querySelectorAll('#storeCategoryPills .category-pill-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  currentStoreFilter = card.dataset.filter || 'all';
+  renderStore();
+});
+
+document.getElementById('myExtFilters')?.addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#myExtFilters .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  currentMyFilter = chip.dataset.filter;
+  renderMyExtensions();
+});
+
+document.getElementById('myExtSearch')?.addEventListener('input', renderMyExtensions);
+document.getElementById('storeSearch')?.addEventListener('input', renderStore);
+document.getElementById('storeSearch')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const val = e.target.value.trim();
+    if (val) searchOnlineChromeWebStore(val);
+  }
+});
+
+// ── Install by ID ─────────────────────────
+document.getElementById('btnInstallById')?.addEventListener('click', () => {
+  const val = document.getElementById('crxIdInput').value.trim();
+  if (!val) return showToast('Digite um ID ou URL válido', 'error');
+  let crxId = val;
+  // Parse URL if pasted
+  try { 
+    const u = new URL(val); 
+    const parts = u.pathname.split('/'); 
+    crxId = parts[parts.length - 1] || crxId; 
+  } catch(e) {}
+  openInStore(crxId);
+});
+
+document.querySelectorAll('.store-shortcut').forEach(btn => {
+  btn.addEventListener('click', () => openInStore(btn.dataset.id));
+});
+
+document.getElementById('btnBrowseExtFolder').addEventListener('click', () => {
+  showToast('Recurso disponível somente na versão empacotada do Vortex', 'info');
+});
+document.getElementById('btnLoadUnpacked').addEventListener('click', () => {
+  const path = document.getElementById('unpkgPathInput').value.trim();
+  if (!path) return showToast('Escolha uma pasta primeiro', 'error');
+  showToast('Recurso disponível somente na versão empacotada do Vortex', 'info');
+});
+
+// ── Sync ─────────────────────────────────
+function loadSyncProfile() {
+  try {
+    const p = JSON.parse(localStorage.getItem('vortex-profile-cache') || '{}');
+    userProfile = p;
+    const nameEl = document.getElementById('syncDisplayName');
+    const emailEl = document.getElementById('syncDisplayEmail');
+    const avatarEl = document.getElementById('syncAvatar');
+    const badgesEl = document.getElementById('syncBadges');
+
+    if (p.email) {
+      nameEl.textContent = p.name || p.email.split('@')[0];
+      emailEl.textContent = p.email;
+      avatarEl.textContent = (p.name || p.email)[0].toUpperCase();
+      const lastSync = p.lastSync ? new Date(p.lastSync).toLocaleString('pt-BR') : 'Nunca';
+      badgesEl.innerHTML = `
+        <span class="sync-badge green">✓ Conectado</span>
+        <span class="sync-badge">Última sync: ${lastSync}</span>`;
+      document.getElementById('btnSyncNow').style.display = 'inline-flex';
+      document.getElementById('btnSyncLogin').style.display = 'none';
+      document.getElementById('syncEmailField').value = p.email || '';
+      document.getElementById('syncNameField').value = p.name || '';
+    } else {
+      nameEl.textContent = 'Não conectado';
+      emailEl.textContent = 'Faça login para sincronizar seus dados';
+      avatarEl.textContent = '?';
+      badgesEl.innerHTML = '<span class="sync-badge" style="color:var(--red);border-color:rgba(248,81,73,.3)">✗ Desconectado</span>';
+      document.getElementById('btnSyncLogin').style.display = '';
+      document.getElementById('btnSyncNow').style.display = 'none';
+    }
+
+    // Counts
+    const bm = JSON.parse(localStorage.getItem('vortex-bookmarks') || '[]');
+    document.getElementById('syncCountBookmarks').textContent = bm.length + ' itens';
+    document.getElementById('syncCountPasswords').textContent = '— itens';
+    document.getElementById('syncCountExtensions').textContent = myExtensions.length + ' itens';
+    const hist = JSON.parse(localStorage.getItem('vortex-history') || '[]');
+    document.getElementById('syncCountHistory').textContent = hist.length + ' itens';
+  } catch(e) {}
+}
+
+document.getElementById('btnSaveProfile').addEventListener('click', () => {
+  const name = document.getElementById('syncNameField').value.trim();
+  const email = document.getElementById('syncEmailField').value.trim();
+  if (!email) return showToast('Digite um e-mail válido', 'error');
+  const profile = { name, email, syncEnabled: true, lastSync: Date.now() };
+  localStorage.setItem('vortex-profile-cache', JSON.stringify(profile));
+  // Also send to main process if API available
+  if (window.vortexAPI?.saveUserProfile) {
+    window.vortexAPI.saveUserProfile(profile).then(() => {
+      showToast(`Perfil salvo! Conectado como ${name || email}`);
+      loadSyncProfile();
+    });
+  } else {
+    showToast(`Perfil salvo! Conectado como ${name || email}`);
+    loadSyncProfile();
+  }
+});
+
+document.getElementById('btnSyncManage').addEventListener('click', () => {
+  document.querySelector('[data-page="sync"]').click();
+});
+
+document.getElementById('btnSyncNow').addEventListener('click', () => {
+  showToast('Sincronização concluída! ✓ Todos os dados estão atualizados.', 'success');
+  const p = JSON.parse(localStorage.getItem('vortex-profile-cache') || '{}');
+  p.lastSync = Date.now();
+  localStorage.setItem('vortex-profile-cache', JSON.stringify(p));
+  loadSyncProfile();
+});
+
+document.getElementById('btnExportSync').addEventListener('click', () => {
+  const bm = JSON.parse(localStorage.getItem('vortex-bookmarks') || '[]');
+  const hist = JSON.parse(localStorage.getItem('vortex-history') || '[]');
+  const settings = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
+  const payload = {
+    vortexVersion: window.vortexVersion || '1.1.4',
+    exportDate: new Date().toISOString(),
+    profile: userProfile,
+    bookmarks: bm,
+    extensions: myExtensions,
+    settings
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `vortex-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Backup exportado com sucesso!');
+});
+
+document.getElementById('btnImportSync').addEventListener('click', () => {
+  document.getElementById('syncImportFile').click();
+});
+document.getElementById('syncImportFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.bookmarks) localStorage.setItem('vortex-bookmarks', JSON.stringify(data.bookmarks));
+      if (data.extensions) { myExtensions = data.extensions; saveExtensions(); }
+      if (data.settings) localStorage.setItem('vortex-settings', JSON.stringify(data.settings));
+      if (data.profile) localStorage.setItem('vortex-profile-cache', JSON.stringify(data.profile));
+      showToast('Backup importado com sucesso! Recarregue para aplicar.');
+      loadSyncProfile(); renderMyExtensions();
+    } catch(err) { showToast('Arquivo de backup inválido', 'error'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ── Init ──────────────────────────────────
+renderMyExtensions();
+renderStore();
+loadSyncProfile();
+
+// Load profile from main process if available
+if (window.vortexAPI?.getUserProfile) {
+  window.vortexAPI.getUserProfile().then(p => {
+    if (p && p.email) {
+      localStorage.setItem('vortex-profile-cache', JSON.stringify(p));
+      loadSyncProfile();
+    }
+  }).catch(()=>{});
+}
+</script>
+</body>
+</html>

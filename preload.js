@@ -1,0 +1,51 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('vortexAPI', {
+  minimize: () => ipcRenderer.send('window-minimize'),
+  maximize: () => ipcRenderer.send('window-maximize'),
+  close: () => ipcRenderer.send('window-close'),
+  openNewWindow: () => ipcRenderer.send('open-new-window'),
+  openPrivateTab: (url) => ipcRenderer.send('open-private-tab', url || null),
+  getBlockStats: () => ipcRenderer.sendSync('get-block-stats'),
+  getCursorPoint: () => ipcRenderer.sendSync('get-cursor-point'),
+  getCursorPointAsync: () => ipcRenderer.invoke('get-cursor-point'),
+  clearBrowsingData: () => ipcRenderer.send('clear-browsing-data'),
+  onTrackerBlocked: (callback) => ipcRenderer.on('tracker-blocked', (event, data) => callback(data)),
+  onDataCleared: (callback) => ipcRenderer.on('browsing-data-cleared', (event) => callback()),
+  onOpenInNewTab: (callback) => ipcRenderer.on('open-in-new-tab', (event, url) => callback(url)),
+  onPrivateTabReady: (callback) => ipcRenderer.on('private-tab-ready', (event, data) => callback(data)),
+  onDownloadStarted: (callback) => ipcRenderer.on('download-started', (event, data) => callback(data)),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, data) => callback(data)),
+  onDownloadCompleted: (callback) => ipcRenderer.on('download-completed', (event, data) => callback(data)),
+  downloadFtp: (url) => ipcRenderer.send('download-ftp', url),
+  downloadUrl: (url) => ipcRenderer.send('download-url', url),
+  showItemInFolder: (path) => ipcRenderer.send('show-item-in-folder', path),
+  openPath: (path) => ipcRenderer.send('open-path', path),
+  getDownloadsPath: () => ipcRenderer.invoke('get-downloads-path'),
+  setAdblockEnabled: (enabled) => ipcRenderer.send('set-adblock-enabled', enabled),
+  // Módulo de Gerenciamento de Senhas e Sincronização com Email
+  getSavedPasswords: () => ipcRenderer.invoke('get-saved-passwords'),
+  savePassword: (entry) => ipcRenderer.invoke('save-password', entry),
+  deletePassword: (id) => ipcRenderer.invoke('delete-password', id),
+  getUserProfile: () => ipcRenderer.invoke('get-user-profile'),
+  saveUserProfile: (profile) => ipcRenderer.invoke('save-user-profile', profile),
+  syncChromeData: () => ipcRenderer.invoke('sync-chrome-data'),
+  exportVault: () => ipcRenderer.invoke('export-vault'),
+  importVault: (data) => ipcRenderer.invoke('import-vault', data),
+  // Módulo de VPN Gratuita Integrada
+  setVPNProxy: (config) => ipcRenderer.invoke('set-vpn-proxy', config),
+  getVPNStatus: () => ipcRenderer.invoke('get-vpn-status'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  // DevTools — Electron 33+ (modo acoplado e nativo)
+  openDevTools: (data) => ipcRenderer.invoke('open-devtools', data),
+  closeDevTools: (data) => ipcRenderer.invoke('close-devtools', data),
+  isDevToolsOpen: (data) => ipcRenderer.invoke('is-devtools-open', data),
+  dockDevTools: (data) => ipcRenderer.invoke('dock-devtools', data),
+  // Sistema de Atualização Automática (Estilo Chrome)
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, info) => callback(info)),
+  onUpdateProgress: (callback) => ipcRenderer.on('update-download-progress', (event, progress) => callback(progress)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info))
+});

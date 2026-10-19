@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuracoes - Vortex Browser</title>
+  <link rel="stylesheet" href="settings.css">
+  <script>
+    // Apply theme immediately from localStorage to avoid flash
+    (function() {
+      try {
+        const s = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
+        if (s.theme === 'light') document.documentElement.classList.add('theme-light-pending');
+        if (s.highContrast) document.documentElement.classList.add('hc-pending');
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="settings-layout">
+    <aside class="settings-sidebar">
+      <div class="settings-brand">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 7 7c0 7-7 13-7 13s-7-6-7-13a7 7 0 0 1 7-7z"/></svg>
+        <span class="settings-brand-name">Vortex</span>
+      </div>
+      <nav class="settings-nav">
+        <a class="nav-item active" data-section="appearance" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Aparencia
+        </a>
+        <a class="nav-item" data-section="privacy" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Privacidade e Seguranca
+        </a>
+        <a class="nav-item" data-section="search" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Motor de Busca
+        </a>
+        <a class="nav-item" data-section="startup" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Inicializacao
+        </a>
+        <a class="nav-item" data-section="downloads" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Downloads
+        </a>
+        <a class="nav-item" data-section="languages" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Idioma
+        </a>
+        <a class="nav-item" data-section="accessibility" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Acessibilidade
+        </a>
+        <a class="nav-item" data-section="passwords" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Senhas Salvas
+        </a>
+        <a class="nav-item" data-section="sync" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Sincronização & E-mail
+        </a>
+        <a class="nav-item" data-section="about" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Sobre o Vortex
+        </a>
+      </nav>
+    </aside>
+    <main class="settings-content">
+      <section id="section-appearance" class="settings-section active">
+        <h2 class="section-title">&#127912; Aparencia</h2>
+        <div class="setting-card">
+          <div class="setting-info"><label for="themeSelect" class="setting-label">Tema</label><div class="setting-desc">Escolha o tema visual do Vortex</div></div>
+          <div class="setting-control"><select id="themeSelect" class="setting-select" title="Tema do navegador" aria-label="Tema visual do Vortex"><option value="dark" selected>Escuro (Dark)</option><option value="light">Claro (Light)</option><option value="system">Seguir sistema</option></select></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="fontSizeSelect" class="setting-label">Tamanho da fonte</label><div class="setting-desc">Tamanho base da fonte nas paginas</div></div>
+          <div class="setting-control"><select id="fontSizeSelect" class="setting-select" title="Tamanho da fonte" aria-label="Tamanho base da fonte"><option value="small">Pequeno (14px)</option><option value="medium" selected>Medio (16px)</option><option value="large">Grande (18px)</option><option value="xlarge">Muito grande (20px)</option></select></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="showBookmarksBar" class="setting-label">Mostrar barra de favoritos</label><div class="setting-desc">Exibe a barra de favoritos abaixo da barra de enderecos</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="showBookmarksBar" title="Mostrar barra de favoritos" aria-label="Mostrar barra de favoritos"><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="showHomeBtn" class="setting-label">Mostrar botao Home</label><div class="setting-desc">Exibe o botao de pagina inicial na barra de navegacao</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="showHomeBtn" title="Mostrar botao Home" aria-label="Mostrar botao Home" checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="defaultZoomSelect" class="setting-label">Zoom padrao das paginas</label><div class="setting-desc">Nivel de zoom padrao para todas as paginas</div></div>
+          <div class="setting-control"><select id="defaultZoomSelect" class="setting-select" title="Zoom padrao das paginas" aria-label="Zoom padrao"><option value="75">75%</option><option value="90">90%</option><option value="100" selected>100%</option><option value="110">110%</option><option value="125">125%</option><option value="150">150%</option></select></div>
+        </div>
+      </section>
+      <section id="section-privacy" class="settings-section">
+        <h2 class="section-title">&#128274; Privacidade e Seguranca</h2>
+        <div class="setting-card">
+          <div class="setting-info"><label for="adblockEnabled" class="setting-label">Vortex Shield - Bloqueador de Rastreadores</label><div class="setting-desc">Bloqueia telemetria, fingerprinting e anuncios invasivos</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="adblockEnabled" title="Vortex Shield - Bloqueador de Rastreadores" aria-label="Vortex Shield" checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="dntEnabled" class="setting-label">Enviar "Do Not Track" (DNT)</label><div class="setting-desc">Instrui sites a nao rastrear sua atividade</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="dntEnabled" title='Enviar "Do Not Track" (DNT)' aria-label='Do Not Track' checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="gpcEnabled" class="setting-label">Global Privacy Control (GPC)</label><div class="setting-desc">Sinaliza que voce nao deseja ter dados vendidos</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="gpcEnabled" title="Global Privacy Control (GPC)" aria-label="Global Privacy Control" checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="clearOnExit" class="setting-label">Limpar dados ao sair</label><div class="setting-desc">Remove cookies, cache e historico ao fechar o navegador</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="clearOnExit" title="Limpar dados ao sair" aria-label="Limpar dados ao sair"><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="httpWarning" class="setting-label">Avisar sobre sites nao seguros (HTTP)</label><div class="setting-desc">Alerta quando acessar paginas sem criptografia SSL/TLS</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="httpWarning" title="Avisar sobre sites nao seguros (HTTP)" aria-label="Avisar sobre sites HTTP" checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><div class="setting-label">Limpar dados de navegacao agora</div><div class="setting-desc">Cookies, cache, historico e armazenamento local</div></div>
+          <div class="setting-control"><button class="btn-setting-action" id="btnClearNow">Limpar Agora</button></div>
+        </div>
+      </section>
+      <section id="section-search" class="settings-section">
+        <h2 class="section-title">&#128269; Motor de Busca</h2>
+        <div class="setting-card">
+          <div class="setting-info"><label for="searchEngineSelect" class="setting-label">Motor de busca padrao</label><div class="setting-desc">Usado ao digitar palavras na barra de enderecos</div></div>
+          <div class="setting-control"><select id="searchEngineSelect" class="setting-select" title="Motor de busca padrao" aria-label="Motor de busca padrao"><option value="duckduckgo" selected>DuckDuckGo (sem rastreamento)</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option><option value="startpage">Startpage (privacidade)</option><option value="ecosia">Ecosia (ecologico)</option></select></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="searchSuggestions" class="setting-label">Mostrar sugestoes de busca</label><div class="setting-desc">Exibe sugestoes ao digitar na barra de enderecos</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="searchSuggestions" title="Mostrar sugestoes de busca" aria-label="Mostrar sugestoes de busca" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </section>
+      <section id="section-startup" class="settings-section">
+        <h2 class="section-title">Inicializacao</h2>
+        <div class="setting-card">
+          <div class="setting-info"><label for="startupSelect" class="setting-label">Ao iniciar o Vortex, abrir</label><div class="setting-desc">Define o que abre quando o navegador iniciar</div></div>
+          <div class="setting-control"><select id="startupSelect" class="setting-select" title="Ao iniciar o Vortex, abrir" aria-label="Aba de inicializacao"><option value="home" selected>Pagina inicial Vortex (Speed Dial)</option><option value="newtab">Nova aba em branco</option><option value="lastSession">Continuar de onde parei</option></select></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="homePageInput" class="setting-label">Pagina inicial personalizada</label><div class="setting-desc">URL exibida ao clicar no botao Home</div></div>
+          <div class="setting-control"><input type="text" class="setting-input" id="homePageInput" title="Pagina inicial personalizada" aria-label="URL da pagina inicial" placeholder="https://duckduckgo.com" /></div>
+        </div>
+      </section>
+      <section id="section-downloads" class="settings-section">
+        <div class="downloads-header-wrapper">
+          <div>
+            <h2 class="section-title downloads-title">Downloads</h2>
+            <div class="downloads-sub-desc">Veja os downloads em andamento e o histórico de arquivos baixados</div>
+          </div>
+          <div class="downloads-top-actions">
+            <button class="btn-setting-action btn-downloads-open" id="btnOpenDownloadsFolder">
+              <span>📂</span> Abrir Pasta Downloads
+            </button>
+            <button class="btn-setting-action btn-downloads-clear" id="btnClearDownloadsHistory">
+              <span>🗑️</span> Limpar Histórico
+            </button>
+          </div>
+        </div>
+
+        <!-- Opções de Configuração de Download -->
+        <div class="setting-card">
+          <div class="setting-info"><label for="askDownloadLocation" class="setting-label">Perguntar onde salvar cada arquivo</label><div class="setting-desc">Abre a caixa de diálogo de salvar para cada download</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="askDownloadLocation" title="Perguntar onde salvar cada arquivo" aria-label="Perguntar onde salvar cada arquivo" checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><div class="setting-label">Pasta padrão de downloads</div><div class="setting-desc">Onde os arquivos serão salvos</div></div>
+          <div class="setting-control"><span class="setting-path-text" id="downloadFolderPath">Carregando pasta...</span></div>
+        </div>
+
+        <!-- Seção Estilo Chrome: Lista de Downloads (Baixados e Baixando) -->
+        <div class="downloads-list-section">
+          <div class="downloads-list-toolbar">
+            <h3 class="downloads-list-heading">
+              <span>📥</span> Arquivos Baixados e em Andamento
+              <span id="downloadsCountBadge" class="downloads-count-badge">0</span>
+            </h3>
+            <div class="downloads-search-box">
+              <input type="text" id="downloadsSearchInput" placeholder="Pesquisar nos downloads..." class="setting-input downloads-search-input" />
+            </div>
+          </div>
+
+          <div id="downloadsListContainer" class="downloads-list-container">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </div>
+      </section>
+      <section id="section-languages" class="settings-section">
+        <h2 class="section-title">Idioma</h2>
+        <div class="setting-card">
+          <div class="setting-info"><label for="languageSelect" class="setting-label">Idioma da interface</label><div class="setting-desc">Idioma exibido nos menus e configuracoes</div></div>
+          <div class="setting-control"><select id="languageSelect" class="setting-select" title="Idioma da interface" aria-label="Idioma da interface"><option value="pt-BR" selected>Portugues (Brasil)</option><option value="en-US">English (US)</option><option value="es">Espanol</option><option value="fr">Francais</option><option value="de">Deutsch</option></select></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="translatePages" class="setting-label">Oferecer traducao de paginas</label><div class="setting-desc">Pergunta se deseja traduzir paginas em outros idiomas</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="translatePages" title="Oferecer traducao de paginas" aria-label="Oferecer traducao de paginas" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </section>
+      <section id="section-accessibility" class="settings-section">
+        <h2 class="section-title">Acessibilidade</h2>
+        <div class="setting-card">
+          <div class="setting-info"><label for="uiAnimations" class="setting-label">Animacoes de interface</label><div class="setting-desc">Ativa transicoes e microanimacoes no Vortex</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="uiAnimations" title="Animacoes de interface" aria-label="Animacoes de interface" checked><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><label for="highContrast" class="setting-label">Alto contraste</label><div class="setting-desc">Aumenta o contraste para melhor legibilidade</div></div>
+          <div class="setting-control"><label class="toggle"><input type="checkbox" id="highContrast" title="Alto contraste" aria-label="Alto contraste"><span class="toggle-slider"></span></label></div>
+        </div>
+      </section>
+      <section id="section-passwords" class="settings-section">
+        <h2 class="section-title">🔑 Gerenciador de Senhas</h2>
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="offerSavePasswords" class="setting-label">Salvar senhas automaticamente</label>
+            <div class="setting-desc">Perguntar para salvar logins e senhas ao entrar em sites</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" id="offerSavePasswords" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="autofillPasswords" class="setting-label">Preenchimento automático (Autofill)</label>
+            <div class="setting-desc">Preencher usuário e senha automaticamente em páginas salvas</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" id="autofillPasswords" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="passwords-header">
+          <h3 class="passwords-header-title">Senhas Salvas (<span id="passwordsCount">0</span>)</h3>
+          <div class="passwords-actions">
+            <button class="btn-setting-action" id="btnExportVault">📤 Exportar Backup</button>
+            <button class="btn-setting-action" id="btnImportVault">📥 Importar Backup</button>
+            <input type="file" id="importVaultFileInput" class="hidden-file-input" title="Arquivo de backup" aria-label="Importar arquivo de backup JSON" accept=".json" />
+          </div>
+        </div>
+        <div id="passwordsListContainer" class="passwords-list-container">
+          <!-- Itens carregados via settings.js -->
+        </div>
+      </section>
+
+      <section id="section-sync" class="settings-section">
+        <h2 class="section-title">☁️ Sincronização & E-mail</h2>
+        <div class="setting-card">
+          <div class="setting-info">
+            <div class="setting-label">Perfil de Usuário Vortex</div>
+            <div class="setting-desc">Vincule seu e-mail para sincronizar senhas, favoritos e preferências com segurança criptografada</div>
+          </div>
+        </div>
+        <div class="setting-card sync-profile-card">
+          <div class="sync-form-wrapper">
+            <label class="setting-label" for="syncEmailInput">E-mail da sua conta</label>
+            <input type="email" class="setting-input full-width-input" id="syncEmailInput" title="E-mail da sua conta" placeholder="seu-email@exemplo.com" />
+            <label class="setting-label" for="syncNameInput">Seu Nome / Usuário</label>
+            <input type="text" class="setting-input full-width-input" id="syncNameInput" title="Seu nome ou usuário" placeholder="Ex: Dr. Marcos / Suporte" />
+            <div class="sync-status-row">
+              <div>
+                <div class="sync-status-title">Status da Sincronização</div>
+                <div class="sync-status-desc" id="syncStatusDesc">Não conectado</div>
+              </div>
+              <button class="btn-setting-action btn-save-sync" id="btnSaveSyncProfile">Salvar & Conectar E-mail</button>
+            </div>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="syncPasswordsToggle" class="setting-label">Sincronizar senhas salvas</label>
+            <div class="setting-desc">Mantém suas senhas seguras vinculadas ao perfil</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" id="syncPasswordsToggle" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="syncBookmarksToggle" class="setting-label">Sincronizar favoritos</label>
+            <div class="setting-desc">Mantém seus sites favoritos sincronizados</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" id="syncBookmarksToggle" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-about" class="settings-section">
+        <h2 class="section-title">Sobre o Vortex</h2>
+        <div class="about-hero">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 7 7c0 7-7 13-7 13s-7-6-7-13a7 7 0 0 1 7-7z"/></svg>
+          <h3 class="about-name">Vortex Browser</h3>
+          <div class="about-version" id="aboutAppVersion">Versão oficial 64 bits</div>
+          <div class="about-tagline">Velocidade • Privacidade • Segurança Avançada</div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><div class="setting-label">Motor de Renderização</div><div class="setting-desc">Chromium V8 com sandbox de contexto ativado</div></div>
+          <div class="setting-control"><span class="badge-cyan">Electron 33+ (Chromium 130)</span></div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info">
+            <div class="setting-label">Atualizações do Vortex</div>
+            <div class="setting-desc" id="aboutUpdateStatusDesc">O Vortex Browser verifica atualizações automaticamente</div>
+          </div>
+          <div class="setting-control" style="display: flex; gap: 8px; align-items: center;">
+            <span class="badge-cyan badge-updated" id="badgeUpdateStatus">✓ Atualizado</span>
+            <button class="btn-setting-action" id="btnCheckUpdateSettings">Verificar Atualizações</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-info"><div class="setting-label">Licenca</div><div class="setting-desc">Projeto de codigo aberto</div></div>
+          <div class="setting-control"><span class="badge-muted">MIT License</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="settings.js"></script>
+</body>
+</html>

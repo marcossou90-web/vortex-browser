@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vortex Browser</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Custom Titlebar -->
+  <header class="titlebar">
+    <div class="brand-section">
+      <span class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a7 7 0 0 0 7 7c0 7-7 13-7 13s-7-6-7-13a7 7 0 0 1 7-7z"></path>
+        </svg>
+      </span>
+      <span class="brand-text">VORTEX</span>
+    </div>
+
+    <!-- Tabs Container -->
+    <div class="tab-bar-container">
+      <div class="tabs-list" id="tabsList">
+        <!-- Renderizado dinamicamente -->
+      </div>
+      <button class="btn-new-tab" id="btnNewTab" title="Nova Aba (Ctrl+T)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Window System Buttons -->
+    <div class="window-controls">
+      <button class="win-btn" id="btnMinimize" title="Minimizar">🗕</button>
+      <button class="win-btn" id="btnMaximize" title="Maximizar">🗖</button>
+      <button class="win-btn close" id="btnClose" title="Fechar">✕</button>
+    </div>
+  </header>
+
+  <!-- Navigation Toolbar -->
+  <nav class="toolbar">
+    <div class="nav-buttons">
+      <button class="nav-btn" id="btnBack" title="Voltar (Alt+←)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <button class="nav-btn" id="btnForward" title="Avançar (Alt+→)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+      <button class="nav-btn" id="btnReload" title="Recarregar (F5)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+        </svg>
+      </button>
+      <button class="nav-btn" id="btnHome" title="Página Inicial Vortex">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Omnibar / Address bar -->
+    <div class="address-bar-wrapper">
+      <!-- Indicador de Segurança SSL/TLS igual Chrome/Edge/Firefox -->
+      <div class="security-badge" id="btnSecurityStatus" title="Segurança da Conexão">
+        <svg id="securityIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span id="securityText">Início</span>
+      </div>
+
+      <div class="shield-badge" id="btnShieldModal" title="Vortex Privacy Shield">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span id="trackerCountBadge">0</span>
+      </div>
+      <input type="text" class="address-input" id="addressInput" placeholder="Digite uma URL ou pesquise com foco em privacidade..." autocomplete="off" spellcheck="false" />
+
+      <!-- Dropdown de Autocomplete / Sugestões (Omnibox igual Chrome) -->
+      <div class="address-autocomplete-dropdown" id="addressAutocompleteDropdown"></div>
+
+      <!-- Botão Estrela (Favoritar página, igual Chrome) -->
+      <button class="star-btn" id="btnBookmarkStar" title="Adicionar aos favoritos (Ctrl+D)">
+        <svg id="starIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Popup de Favorito (igual Chrome) -->
+    <div class="bookmark-popup" id="bookmarkPopup">
+      <div class="bookmark-popup-header">
+        <span id="bookmarkPopupTitle">Favorito adicionado</span>
+        <button class="bookmark-popup-close" id="bookmarkPopupClose" title="Fechar" aria-label="Fechar">✕</button>
+      </div>
+      <div class="bookmark-popup-body">
+        <label class="bk-label" for="bookmarkNameInput">Nome</label>
+        <input type="text" class="bk-input" id="bookmarkNameInput" title="Nome do favorito" placeholder="Nome do site" />
+        <label class="bk-label" for="bookmarkUrlInput">URL</label>
+        <input type="text" class="bk-input" id="bookmarkUrlInput" title="URL do favorito" placeholder="https://exemplo.com" />
+        <label class="bk-label" for="bookmarkFolder">Pasta</label>
+        <select class="bk-input" id="bookmarkFolder" title="Pasta do favorito" aria-label="Pasta do favorito">
+          <option value="bar">Barra de favoritos</option>
+          <option value="other">Outros favoritos</option>
+        </select>
+      </div>
+      <div class="bookmark-popup-footer">
+        <button class="bk-btn bk-btn-danger" id="bookmarkRemoveBtn">Remover</button>
+        <button class="bk-btn bk-btn-primary" id="bookmarkSaveBtn">Concluído</button>
+      </div>
+    </div>
+
+    <!-- Popup de Salvar Senha (igual Chrome) -->
+    <div class="password-save-popup" id="passwordSavePopup">
+      <div class="password-popup-header">
+        <span class="password-popup-title-wrap">
+          <span>🔑</span> <strong>Salvar senha no Vortex?</strong>
+        </span>
+        <button class="bookmark-popup-close" id="passwordPopupClose" title="Fechar" aria-label="Fechar">✕</button>
+      </div>
+      <div class="password-popup-body">
+        <div class="password-popup-domain" id="passwordPopupDomain">login.exemplo.com</div>
+        <label class="bk-label" for="passwordUsernameInput">Usuário / E-mail</label>
+        <input type="text" class="bk-input" id="passwordUsernameInput" title="Usuário ou e-mail" placeholder="nome@exemplo.com ou usuário" />
+        <label class="bk-label" for="passwordPasswordInput">Senha</label>
+        <div class="password-input-row">
+          <input type="password" class="bk-input password-input-field" id="passwordPasswordInput" title="Senha" placeholder="Digite ou confirme a senha" />
+          <button class="bk-btn password-toggle-btn" id="btnTogglePopupPassword" title="Mostrar ou ocultar senha" aria-label="Mostrar ou ocultar senha" type="button">👁️</button>
+        </div>
+      </div>
+      <div class="password-popup-footer">
+        <button class="bk-btn bk-btn-danger" id="passwordNeverBtn">Nunca</button>
+        <button class="bk-btn" id="passwordCancelBtn">Agora não</button>
+        <button class="bk-btn bk-btn-primary" id="passwordSaveConfirmBtn">Salvar</button>
+      </div>
+    </div>
+
+    <div class="toolbar-actions">
+      <!-- Botão VPN Gratuita Integrada (Vortex Secure Tunnel) -->
+      <button class="nav-btn vpn-toolbar-btn" id="btnVpn" title="Vortex VPN Gratuita (Proteção de IP e Privacidade)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+        <span class="vpn-badge-dot" id="vpnBadgeDot"></span>
+      </button>
+
+      <!-- Botão Extensões (igual Chrome) -->
+      <button class="nav-btn ext-toolbar-btn" id="btnExtensions" title="Extensões">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      </button>
+
+      <!-- Botão Perfil / Conta (igual Chrome) -->
+      <button class="nav-btn profile-nav-btn" id="btnProfileMenu" title="Perfil Vortex e Sincronização">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+
+      <!-- Botão Acesso Rápido a Senhas -->
+      <button class="nav-btn" id="btnVaultPasswords" title="Senhas Salvas & Cofre (Vortex Vault)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </button>
+
+      <button class="nav-btn" id="btnDevTools" title="Inspecionar / Developer Tools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+      </button>
+
+      <!-- Botão Aba Anônima (igual Chrome) -->
+      <button class="nav-btn incognito-btn" id="btnIncognito" title="Nova guia anônima (Ctrl+Shift+N)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+          <line x1="1" y1="1" x2="23" y2="23" stroke-width="2.5"/>
+        </svg>
+      </button>
+
+      <!-- Toggle Barra de Favoritos -->
+      <button class="nav-btn" id="btnToggleBookmarksBar" title="Mostrar/ocultar barra de favoritos">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+
+      <!-- Botão Badge de Atualização (Igual Google Chrome: 'Atualizar' verde/azul destacado no canto superior direito) -->
+      <button class="nav-btn update-badge-btn" id="btnUpdateBadge" title="Atualização do Vortex disponível!" style="display: none;">
+        <span class="update-badge-dot"></span>
+        <span class="update-badge-text">Atualizar</span>
+      </button>
+
+      <!-- Botão Três Pontinhos (igual Chrome) -->
+      <button class="nav-btn three-dots-btn" id="btnMenuDots" title="Personalizar e controlar o Vortex">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Bookmarks Bar (Barra de favoritos) — itens renderizados pelo renderer.js -->
+  <div class="bookmarks-bar" id="bookmarksBar"></div>
+
+  <!-- Popup da VPN Gratuita (Vortex Secure Tunnel) -->
+  <div class="vpn-popup" id="vpnPopup">
+    <div class="vpn-popup-header">
+      <div class="vpn-popup-title-group">
+        <span class="vpn-popup-icon">🛡️</span>
+        <div>
+          <div class="vpn-popup-title-text">Vortex VPN</div>
+          <div class="vpn-popup-sub-text">Túnel Criptografado Gratuito</div>
+        </div>
+      </div>
+      <button class="bookmark-popup-close" id="btnVpnClose" title="Fechar" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="vpn-popup-body">
+      <!-- Status Card -->
+      <div class="vpn-status-hero" id="vpnStatusHero">
+        <div class="vpn-status-badge" id="vpnStatusBadge">DESCONECTADO</div>
+        <div class="vpn-status-ip" id="vpnStatusIp">Seu IP real está exposto</div>
+      </div>
+
+      <!-- Grande Botão de Ligar / Desligar -->
+      <div class="vpn-toggle-wrapper">
+        <button class="vpn-power-btn" id="btnVpnToggle" title="Ativar ou Desativar VPN">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+            <line x1="12" y1="2" x2="12" y2="12"></line>
+          </svg>
+        </button>
+        <div class="vpn-toggle-label" id="vpnToggleLabel">Clique para conectar</div>
+      </div>
+
+      <!-- Seleção de Servidor / País -->
+      <div class="vpn-location-box">
+        <label class="bk-label vpn-location-label" for="vpnLocationSelect">
+          <span>Localização do Servidor</span>
+          <span class="vpn-location-free-tag">100% Gratuito</span>
+        </label>
+        <select class="bk-input vpn-location-select" id="vpnLocationSelect">
+          <option value="auto" selected>⚡ Melhor Localização (Automático)</option>
+          <option value="us">🇺🇸 Estados Unidos (Nova York - Alta Velocidade)</option>
+          <option value="ca">🇨🇦 Canadá (Montreal - Rápido)</option>
+          <option value="de">🇩🇪 Alemanha (Frankfurt - Ultra Seguro)</option>
+          <option value="nl">🇳🇱 Holanda (Amsterdã - Sem Restrições)</option>
+          <option value="br">🇧🇷 Brasil (São Paulo - Baixa Latência)</option>
+          <option value="jp">🇯🇵 Japão (Tóquio - Ásia)</option>
+        </select>
+        <div class="vpn-encryption-info">
+          <span>🔒 Criptografia AES de ponta a ponta</span>
+          <span>•</span>
+          <span>Sem limite de dados</span>
+        </div>
+      </div>
+
+      <!-- Recursos de Proteção -->
+      <div class="vpn-features-chips">
+        <div class="vpn-chip">🛡️ Sem Logs</div>
+        <div class="vpn-chip">🚀 DNS Seguro</div>
+        <div class="vpn-chip">⚡ WebRTC Shield</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup de Extensões Ativas (igual Chrome) -->
+  <div class="extensions-popup" id="extensionsPopup">
+    <div class="ext-popup-header">
+      <span class="ext-popup-title">Extensões</span>
+      <button class="ext-popup-manage" id="btnManageExtensions" title="Gerenciar extensões">Gerenciar</button>
+    </div>
+    <div class="ext-popup-pinned" id="extPopupPinned">
+      <!-- Populated by renderer.js -->
+    </div>
+    <div class="ext-popup-divider hidden" id="extPopupDividerOther"></div>
+    <div class="ext-popup-others" id="extPopupOthers">
+      <!-- Populated by renderer.js -->
+    </div>
+    <div class="ext-popup-footer">
+      <a href="#" id="extPopupOpenPage" class="ext-popup-footer-link">Abrir página de extensões →</a>
+    </div>
+  </div>
+
+  <!-- Popup de Perfil / Conta (igual Chrome) -->
+  <div class="profile-popup" id="profilePopup">
+    <div class="profile-popup-hero" id="profilePopupHero" title="Clique para conectar ou gerenciar conta">
+      <div class="profile-popup-avatar" id="profilePopupAvatar">?</div>
+      <div class="profile-popup-info">
+        <div class="profile-popup-name" id="profilePopupName">Não conectado</div>
+        <div class="profile-popup-email" id="profilePopupEmail">Clique para conectar seu e-mail</div>
+      </div>
+    </div>
+    <div class="profile-popup-actions profile-connect-action" id="profileConnectActionWrap">
+      <button class="profile-popup-btn profile-btn-unified" id="btnQuickConnectEmail" title="Conectar ou sincronizar sua conta">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.1 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2s.7 5.5 1.9 7.9l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.1-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/></svg>
+        <span>Conectar com Google / E-mail</span>
+      </button>
+    </div>
+    <div class="profile-popup-divider"></div>
+    <div class="profile-popup-actions">
+      <button class="profile-popup-btn hidden-initial" id="btnOpenGoogleAccounts">
+        <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+        <span>Gerenciar Conta Google</span>
+      </button>
+      <button class="profile-popup-btn" id="btnImportChromeData">
+        <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.1 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2s.7 5.5 1.9 7.9l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.1-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/></svg>
+        <span>Importar Dados do Google Chrome</span>
+      </button>
+      <button class="profile-popup-btn" id="btnProfileSync">🔄 Sincronização e Backup</button>
+      <button class="profile-popup-btn" id="btnProfilePasswords">🔑 Senhas e preenchimento</button>
+      <button class="profile-popup-btn" id="btnProfileExtensions">🧩 Extensões</button>
+    </div>
+    <div class="profile-popup-divider"></div>
+    <div class="profile-popup-actions">
+      <button class="profile-popup-btn" id="btnProfileSettings">⚙️ Personalizar perfil</button>
+      <button class="profile-popup-btn profile-btn-danger hidden-initial" id="btnProfileLogout">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Sair e Desvincular Conta</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Menu Dropdown Três Pontinhos (estilo Chrome) -->
+  <div class="dots-menu" id="dotsMenu">
+    <div class="dots-group">
+      <div class="dots-item" id="dm-new-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span>Nova guia</span><kbd>Ctrl+T</kbd>
+      </div>
+      <div class="dots-item" id="dm-new-window">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        <span>Nova janela</span><kbd>Ctrl+N</kbd>
+      </div>
+      <div class="dots-item dots-item-incognito" id="dm-incognito">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/></svg>
+        <span>Nova guia anônima</span><kbd>Ctrl+Shift+N</kbd>
+      </div>
+    </div>
+    <div class="dots-divider"></div>
+    <div class="dots-group">
+      <div class="dots-item" id="dm-history">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Historico</span>
+      </div>
+      <div class="dots-item" id="dm-downloads">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Downloads</span><kbd>Ctrl+J</kbd>
+      </div>
+      <div class="dots-item" id="dm-bookmarks">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span>Favoritos e listas</span>
+      </div>
+      <div class="dots-item" id="dm-passwords">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Senhas salvas e preenchimento</span>
+      </div>
+      <div class="dots-item" id="dm-extensions">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span>Extensões</span>
+      </div>
+      <div class="dots-item" id="dm-clear">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        <span>Excluir dados de navegacao</span><kbd>Ctrl+Shift+Del</kbd>
+      </div>
+    </div>
+    <div class="dots-divider"></div>
+    <!-- Zoom Control -->
+    <div class="dots-group">
+      <div class="dots-zoom-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Zoom</span>
+        <div class="zoom-controls">
+          <button class="zoom-btn" id="dm-zoom-out">−</button>
+          <span class="zoom-value" id="dm-zoom-value">100%</span>
+          <button class="zoom-btn" id="dm-zoom-in">+</button>
+          <button class="zoom-btn zoom-btn-full" id="dm-zoom-full" title="Tela cheia">⛶</button>
+        </div>
+      </div>
+    </div>
+    <div class="dots-divider"></div>
+    <div class="dots-group">
+      <div class="dots-item" id="dm-print">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span>Imprimir...</span><kbd>Ctrl+P</kbd>
+      </div>
+      <div class="dots-item" id="dm-find">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Localizar na pagina</span><kbd>Ctrl+F</kbd>
+      </div>
+      <div class="dots-item" id="dm-devtools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Ferramentas do desenvolvedor</span><kbd>F12</kbd>
+      </div>
+    </div>
+    <div class="dots-divider"></div>
+    <div class="dots-group">
+      <div class="dots-item" id="dm-bookmark-page">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span>Adicionar aos favoritos</span><kbd>Ctrl+D</kbd>
+      </div>
+    </div>
+    <div class="dots-divider" id="dm-update-divider" style="display: none;"></div>
+    <div class="dots-group" id="dm-update-group" style="display: none;">
+      <div class="dots-item dots-item-update" id="dm-update">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span style="color: #4ade80; font-weight: 600;">Reiniciar para atualizar</span>
+      </div>
+    </div>
+    <div class="dots-divider"></div>
+    <div class="dots-group">
+      <div class="dots-item" id="dm-settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Configurações</span>
+      </div>
+      <div class="dots-item dots-item-exit" id="dm-quit">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Sair</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backdrop do Menu de Contexto (fecha com clique em qualquer lugar) -->
+  <div id="contextMenuBackdrop" class="context-menu-backdrop"></div>
+
+  <!-- Menu de Contexto (Botão Direito) -->
+  <div class="context-menu" id="contextMenu">
+    <div class="ctx-item" id="ctx-back">
+      <span>Voltar</span><kbd>Alt+←</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-forward">
+      <span>Avançar</span><kbd>Alt+→</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-reload">
+      <span>Recarregar</span><kbd>Ctrl+R</kbd>
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" id="ctx-new-tab">
+      <span>Nova guia</span><kbd>Ctrl+T</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-incognito">
+      <span>Nova guia anônima</span><kbd>Ctrl+Shift+N</kbd>
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" id="ctx-save">
+      <span>Salvar como...</span><kbd>Ctrl+S</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-print">
+      <span>Imprimir...</span><kbd>Ctrl+P</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-find">
+      <span>Localizar na página</span><kbd>Ctrl+F</kbd>
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" id="ctx-bookmark">
+      <span>Adicionar aos favoritos</span><kbd>Ctrl+D</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-view-source">
+      <span>Exibir código fonte</span><kbd>Ctrl+U</kbd>
+    </div>
+    <div class="ctx-item" id="ctx-inspect">
+      <span>Inspecionar</span><kbd>F12</kbd>
+    </div>
+  </div>
+
+  <!-- Barra de Busca na Página (Find in Page) -->
+  <div class="find-bar" id="findBar">
+    <input type="text" id="findInput" class="find-input" placeholder="Localizar na página..." />
+    <span id="findResultInfo" class="find-result-info"></span>
+    <button class="find-btn" id="findPrev" title="Anterior (Shift+Enter)">▲</button>
+    <button class="find-btn" id="findNext" title="Próximo (Enter)">▼</button>
+    <button class="find-btn find-close" id="findClose" title="Fechar (Esc)">✕</button>
+  </div>
+
+  <!-- WebViews & Home Screen Container -->
+  <main class="views-container" id="viewsContainer">
+    <!-- Home / Speed Dial Screen -->
+    <div class="home-view" id="homeView">
+      <div class="home-hero">
+        <h1 class="hero-title">Vortex Browser</h1>
+        <p class="hero-subtitle">Navegação ultrarrápida, minimalista e com privacidade por padrão.</p>
+      </div>
+
+      <div class="search-box-home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="search-input-home" id="homeSearchInput" placeholder="Buscar com DuckDuckGo sem rastreamento..." />
+      </div>
+
+      <div class="quick-tiles">
+        <div class="tile" data-url="https://github.com">
+          <span class="tile-icon">🐙</span>
+          <span class="tile-title">GitHub</span>
+        </div>
+        <div class="tile" data-url="https://duckduckgo.com">
+          <span class="tile-icon">🦆</span>
+          <span class="tile-title">DuckDuckGo</span>
+        </div>
+        <div class="tile" data-url="https://news.ycombinator.com">
+          <span class="tile-icon">⚡</span>
+          <span class="tile-title">Hacker News</span>
+        </div>
+        <div class="tile" data-url="https://developer.mozilla.org">
+          <span class="tile-icon">🌐</span>
+          <span class="tile-title">MDN Web</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra Flutuante de Link Hover (Igual ao Chrome/Edge no canto inferior esquerdo) -->
+    <div class="link-preview-tooltip" id="linkPreviewTooltip"></div>
+
+    <!-- Painel de DevTools Acoplado à Direita na mesma janela -->
+    <div class="devtools-dock-container" id="devtoolsDockContainer">
+      <div class="devtools-resizer" id="devtoolsResizer" title="Arraste para redimensionar"></div>
+      <div class="devtools-dock-header">
+        <div class="devtools-dock-title">
+          <span>⚙️ Ferramentas do Desenvolvedor</span>
+        </div>
+        <div class="devtools-dock-actions">
+          <button class="devtools-btn" id="btnDevtoolsDetach" title="Abrir em janela separada">⧉</button>
+          <button class="devtools-btn devtools-close" id="btnDevtoolsClose" title="Fechar DevTools">✕</button>
+        </div>
+      </div>
+      <webview class="devtools-dock-webview" id="devtoolsDockWebview" src="about:blank"></webview>
+    </div>
+  </main>
+
+  <!-- Security Details Modal -->
+  <div class="modal-overlay" id="securityModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="securityModalTitle">🔒 Segurança da Página</h3>
+        <button class="win-btn" id="btnCloseSecurityModal">✕</button>
+      </div>
+      <div class="privacy-card">
+        <div>
+          <div class="privacy-card-title">Status da Conexão</div>
+          <div class="privacy-card-desc" id="securityModalDesc">Verificando criptografia SSL/TLS...</div>
+        </div>
+        <span class="privacy-badge-status" id="securityModalBadge">SEGURO</span>
+      </div>
+      <div class="privacy-card">
+        <div>
+          <div class="privacy-card-title">Motor de Renderização</div>
+          <div class="privacy-card-desc">Chromium V8 com isolamento de contexto (Sandboxed)</div>
+        </div>
+        <span class="privacy-badge-status status-active">ATIVO</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Shield Modal -->
+  <div class="modal-overlay" id="privacyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🛡️ Vortex Shield Protection</h3>
+        <button class="win-btn" id="btnCloseModal">✕</button>
+      </div>
+      <div class="privacy-card">
+        <div>
+          <div class="privacy-card-title">Rastreadores e Anúncios Bloqueados</div>
+          <div class="privacy-card-desc">Protegendo sua largura de banda e tempo de CPU</div>
+        </div>
+        <span class="privacy-count-value" id="modalTrackerCount">0</span>
+      </div>
+      <div class="privacy-card">
+        <div>
+          <div class="privacy-card-title">Headers Antirrastreio</div>
+          <div class="privacy-card-desc">DNT & Sec-GPC ativados nativamente</div>
+        </div>
+        <span class="privacy-badge-status">ATIVO</span>
+      </div>
+      <button class="btn-danger" id="btnClearData">Limpar Cache & Cookies Agora</button>
+    </div>
+  </div>
+
+  <!-- Download Toast Container -->
+  <div class="download-toast-container" id="downloadToastContainer"></div>
+
+  <!-- Incognito Welcome Modal -->
+  <div class="incognito-modal-overlay" id="incognitoModal">
+    <div class="incognito-modal">
+      <div class="incognito-modal-header">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+          <line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/>
+        </svg>
+        <h2 class="incognito-modal-title">Modo Anônimo Ativado</h2>
+      </div>
+      <p class="incognito-modal-desc">O Vortex <strong>não salvará</strong> neste computador:</p>
+      <ul class="incognito-features-list">
+        <li>🕐 Histórico de navegação</li>
+        <li>🍪 Cookies e dados de sites</li>
+        <li>📝 Informações inseridas em formulários</li>
+        <li>📦 Cache e armazenamento local</li>
+      </ul>
+      <p class="incognito-modal-warning">⚠️ Sua atividade pode ainda ser visível para o seu provedor de internet, empregador ou os próprios sites visitados.</p>
+      <button class="incognito-modal-close" id="incognitoModalClose">Entendi, fechar</button>
+    </div>
+  </div>
+
+  <!-- Modal de Login e Conexão de E-mail (Perfil & Sync) -->
+  <div class="modal-overlay" id="profileLoginModal">
+    <div class="modal-content profile-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">👤 Conectar Conta Vortex</h3>
+        <button class="win-btn" id="btnCloseLoginModal">✕</button>
+      </div>
+      <div class="profile-modal-desc">
+        Conecte seu e-mail para sincronizar automaticamente seus <strong>favoritos</strong>, <strong>senhas criptografadas</strong>, <strong>extensões</strong> e configurações em todos os seus computadores.
+      </div>
+      <div class="profile-modal-form">
+        <div class="profile-form-group">
+          <label class="profile-form-label" for="loginInputName">Seu Nome / Apelido</label>
+          <input type="text" class="profile-form-input" id="loginInputName" placeholder="Ex: Usuário Vortex">
+        </div>
+        <div class="profile-form-group">
+          <label class="profile-form-label" for="loginInputEmail">Seu E-mail</label>
+          <input type="email" class="profile-form-input" id="loginInputEmail" placeholder="seu-email@exemplo.com">
+        </div>
+        <div class="profile-modal-buttons">
+          <button class="btn-primary" id="btnConfirmLoginEmail">✓ Conectar e Ativar Sincronização</button>
+          <button class="btn-cancel" id="btnCancelLoginEmail">Cancelar</button>
+        </div>
+        <div class="profile-modal-or-divider">
+          <div class="profile-or-line"></div>
+          <span class="profile-or-text">ou</span>
+          <div class="profile-or-line"></div>
+        </div>
+        <button class="profile-popup-btn profile-btn-google profile-btn-google-modal" id="btnConnectGoogleWeb" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.1 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2s.7 5.5 1.9 7.9l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.1-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/></svg>
+          <span>Fazer Login com Conta Google na Web</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Atualização Disponível / Instalar Atualização (Igual Google Chrome) -->
+  <div class="modal-overlay" id="updatePromptModal">
+    <div class="modal-content update-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🚀 Atualização do Vortex Disponível</h3>
+        <button class="win-btn" id="btnCloseUpdateModal">✕</button>
+      </div>
+      <div class="update-modal-body">
+        <div class="update-info-badge">
+          <span class="update-pulse-icon">✨</span>
+          <div>
+            <div class="update-title-text" id="updateVersionTitle">Nova versão disponível!</div>
+            <div class="update-subtitle-text" id="updateVersionDesc">Uma versão mais rápida e segura do Vortex está pronta para você.</div>
+          </div>
+        </div>
+
+        <div class="update-progress-container" id="updateProgressContainer" style="display: none;">
+          <div class="update-progress-bar-bg">
+            <div class="update-progress-bar-fill" id="updateProgressBarFill" style="width: 0%;"></div>
+          </div>
+          <div class="update-progress-label" id="updateProgressLabel">Baixando atualização... 0%</div>
+        </div>
+
+        <div class="update-ready-box" id="updateReadyBox" style="display: none;">
+          <div class="update-ready-icon">✓</div>
+          <div class="update-ready-text">Atualização baixada com sucesso! O Vortex será reiniciado e manterá todas as suas abas e dados abertos.</div>
+        </div>
+      </div>
+      <div class="update-modal-footer">
+        <button class="btn-cancel" id="btnPostponeUpdate">Lembrar Mais Tarde</button>
+        <button class="btn-primary btn-update-action" id="btnActionUpdate">Baixar e Atualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

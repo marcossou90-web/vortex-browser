@@ -1,0 +1,81 @@
+{
+  "name": "vortex-browser",
+  "version": "1.1.15",
+  "description": "Vortex - Modern, Fast, Minimalist & Privacy-Focused Web Browser",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "predist": "node bump-version.js",
+    "dist": "electron-builder --win nsis",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcossou90-web/vortex-browser.git"
+  },
+  "build": {
+    "appId": "com.vortex.browser",
+    "productName": "Vortex Browser",
+    "copyright": "Copyright © 2026 Vortex Team",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "settings.html",
+      "settings.css",
+      "settings.js",
+      "extensions.html",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "marcossou90-web",
+        "repo": "vortex-browser",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vortex Browser",
+      "deleteAppDataOnUninstall": true
+    }
+  },
+  "keywords": [
+    "browser",
+    "vortex",
+    "privacy",
+    "minimalist",
+    "developer"
+  ],
+  "author": "Vortex Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "basic-ftp": "^6.2.3",
+    "electron-updater": "^6.8.9"
+  }
+}

@@ -1,0 +1,1119 @@
+const { app, BrowserWindow, ipcMain, session, shell, screen, webContents, safeStorage } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const net = require('net');
+const crypto = require('crypto');
+const ftp = require('basic-ftp');
+let autoUpdater = null;
+try {
+  autoUpdater = require('electron-updater').autoUpdater;
+} catch (e) {
+  console.warn('electron-updater não disponível no momento:', e.message);
+}
+
+// Evitar conflitos de permissão e erros de cache no Windows (Acesso negado 0x5)
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+const vortexDataDir = path.join(app.getPath('appData'), 'VortexBrowserData');
+try {
+  if (!fs.existsSync(vortexDataDir)) {
+    fs.mkdirSync(vortexDataDir, { recursive: true });
+  }
+  app.setPath('userData', vortexDataDir);
+} catch (e) {
+  console.error('Erro ao definir userData:', e);
+}
+
+// ── Segurança: Limpar perfil importado automaticamente do Chrome ───────────
+// Versões anteriores do Vortex podiam importar dados do Chrome sem permissão.
+// Ao iniciar, verificamos se o perfil salvo veio de importação automática e limpamos.
+const PROFILE_FILE_TEMP = path.join(vortexDataDir, 'vortex-profile.json');
+try {
+  if (fs.existsSync(PROFILE_FILE_TEMP)) {
+    const savedProfile = JSON.parse(fs.readFileSync(PROFILE_FILE_TEMP, 'utf8'));
+    // Se o perfil não tem a flag 'manuallyConnected', foi importado automaticamente — limpar
+    if (savedProfile && savedProfile.email && !savedProfile.manuallyConnected) {
+      const cleanProfile = { email: '', name: '', photoUrl: '', syncEnabled: false, lastSync: null };
+      fs.writeFileSync(PROFILE_FILE_TEMP, JSON.stringify(cleanProfile, null, 2), 'utf8');
+      console.log('[Vortex] Perfil auto-importado do Chrome removido. Usuário deve conectar manualmente.');
+    }
+  }
+} catch(e) {}
+
+
+// ── Cofre Seguro de Senhas e Perfil de Sincronização ───────────────────
+const PASSWORDS_FILE = path.join(vortexDataDir, 'vortex-passwords.enc');
+const PROFILE_FILE = path.join(vortexDataDir, 'vortex-profile.json');
+const CRYPTO_KEY = crypto.scryptSync('VORTEX_BROWSER_VAULT_KEY_2026', 'vortex-salt', 32);
+
+function encryptData(text) {
+  try {
+    // 1. Usar safeStorage nativo do Windows (DPAPI) sempre que disponível
+    if (safeStorage && safeStorage.isEncryptionAvailable()) {
+      const encryptedBuffer = safeStorage.encryptString(text);
+      return 'safe:' + encryptedBuffer.toString('hex');
+    }
+  } catch (e) {
+    console.warn('safeStorage indisponível, usando AES-256 fallback:', e.message);
+  }
+
+  // 2. Fallback seguro com AES-256-CBC
+  try {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', CRYPTO_KEY, iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return 'aes:' + iv.toString('hex') + ':' + encrypted;
+  } catch (e) {
+    return text;
+  }
+}
+
+function decryptData(text) {
+  if (!text) return text;
+
+  // Formato seguro com safeStorage
+  if (text.startsWith('safe:')) {
+    try {
+      if (safeStorage && safeStorage.isEncryptionAvailable()) {
+        const hex = text.slice(5);
+        const buf = Buffer.from(hex, 'hex');
+        return safeStorage.decryptString(buf);
+      }
+    } catch (e) {
+      console.error('Erro ao descriptografar com safeStorage:', e.message);
+    }
+  }
+
+  // Formato com prefixo 'aes:' ou legado 'iv:ciphertext'
+  let rawText = text;
+  if (rawText.startsWith('aes:')) {
+    rawText = rawText.slice(4);
+  }
+
+  try {
+    const parts = rawText.split(':');
+    if (parts.length !== 2) return rawText;
+    const iv = Buffer.from(parts[0], 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', CRYPTO_KEY, iv);
+    let decrypted = decipher.update(parts[1], 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (e) {
+    return text;
+  }
+}
+
+function loadPasswords() {
+  try {
+    if (fs.existsSync(PASSWORDS_FILE)) {
+      const raw = fs.readFileSync(PASSWORDS_FILE, 'utf8');
+      const decrypted = decryptData(raw);
+      const parsed = JSON.parse(decrypted);
+
+      // Se foi lido do formato legado AES e o safeStorage estiver ativo, migrar automaticamente
+      if (!raw.startsWith('safe:') && safeStorage && safeStorage.isEncryptionAvailable()) {
+        savePasswords(parsed);
+      }
+
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch (e) {
+    console.error('Erro ao ler cofre de senhas:', e);
+  }
+  return [];
+}
+
+function savePasswords(list) {
+  try {
+    const json = JSON.stringify(list, null, 2);
+    const enc = encryptData(json);
+    fs.writeFileSync(PASSWORDS_FILE, enc, 'utf8');
+    return true;
+  } catch (e) {
+    console.error('Erro ao salvar cofre de senhas:', e);
+    return false;
+  }
+}
+
+function loadUserProfile() {
+  try {
+    if (fs.existsSync(PROFILE_FILE)) {
+      return JSON.parse(fs.readFileSync(PROFILE_FILE, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Erro ao ler perfil:', e);
+  }
+  // Perfil padrão vazio — o usuário deve configurar manualmente
+  return { email: '', name: '', photoUrl: '', syncEnabled: false, lastSync: null };
+}
+
+function saveUserProfile(profile) {
+  try {
+    fs.writeFileSync(PROFILE_FILE, JSON.stringify(profile, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('Erro ao salvar perfil:', e);
+    return false;
+  }
+}
+
+
+let mainWindow;
+
+// Lista ampliada e eficiente de bloqueio de anúncios e telemetria (AdBlocker / Privacy Shield)
+const TRACKER_BLOCK_LIST = [
+  // Google Ads, Analytics & Telemetry
+  '*://*.doubleclick.net/*',
+  '*://*.google-analytics.com/*',
+  '*://*.googletagmanager.com/*',
+  '*://*.googleadservices.com/*',
+  '*://*.googlesyndication.com/*',
+  '*://pagead2.googlesyndication.com/*',
+  '*://adservice.google.com/*',
+  // Redes Sociais & Tracking Pixels
+  '*://*.facebook.com/tr/*',
+  '*://connect.facebook.net/*',
+  '*://*.ads-twitter.com/*',
+  '*://static.ads-twitter.com/*',
+  '*://*.analytics.twitter.com/*',
+  '*://*.tiktok.com/api/v1/pixel/*',
+  '*://analytics.tiktok.com/*',
+  // Principais redes de Adtech & Afiliados
+  '*://*.scorecardresearch.com/*',
+  '*://*.adnxs.com/*',
+  '*://*.criteo.com/*',
+  '*://*.criteo.net/*',
+  '*://*.hotjar.com/*',
+  '*://*.hotjar.io/*',
+  '*://*.outbrain.com/*',
+  '*://*.taboola.com/*',
+  '*://*.quantserve.com/*',
+  '*://*.rubiconproject.com/*',
+  '*://*.pubmatic.com/*',
+  '*://*.openx.net/*',
+  '*://*.casalemedia.com/*',
+  '*://*.smartadserver.com/*',
+  '*://*.advertising.com/*',
+  '*://*.popads.net/*',
+  '*://*.popcash.net/*',
+  '*://*.propellerads.com/*',
+  '*://*.exoclick.com/*',
+  '*://*.trafficjunky.com/*',
+  '*://*.zergnet.com/*'
+];
+
+let adBlockStats = { blockedCount: 0, enabled: true };
+
+// Detector de arquivos que devem ser baixados diretamente
+function isDownloadableUrl(url) {
+  if (!url) return false;
+  try {
+    const cleanUrl = url.split('?')[0].split('#')[0].toLowerCase();
+    const downloadExtensions = [
+      '.exe', '.msi', '.zip', '.rar', '.7z', '.tar', '.gz',
+      '.dts', '.dbf', '.dbc', '.cnv', '.iso', '.bin', '.apk',
+      '.dmg', '.rpm', '.deb'
+    ];
+    return downloadExtensions.some(ext => cleanUrl.endsWith(ext));
+  } catch (e) {
+    return false;
+  }
+}
+
+// Gerenciador nativo de Download FTP (Datasus: SIASUS, SIHD, CIHA, etc.)
+async function downloadFtpUrl(ftpUrl) {
+  let client;
+  let fileName = 'download';
+  let localPath = '';
+  try {
+    const parsed = new URL(ftpUrl);
+    const host = parsed.hostname;
+    const port = parsed.port ? parseInt(parsed.port, 10) : 21;
+    const user = parsed.username || 'anonymous';
+    const password = parsed.password || 'anonymous@vortex.local';
+    const remotePath = decodeURIComponent(parsed.pathname);
+    fileName = path.basename(remotePath) || 'download';
+
+    const downloadsDir = app.getPath('downloads');
+    localPath = path.join(downloadsDir, fileName);
+    let counter = 1;
+    const ext = path.extname(fileName);
+    const base = path.basename(fileName, ext);
+    while (fs.existsSync(localPath)) {
+      localPath = path.join(downloadsDir, `${base} (${counter})${ext}`);
+      counter++;
+    }
+
+    client = new ftp.Client();
+    client.ftp.verbose = false;
+    client.ftp.timeout = 45000;
+
+    await client.access({
+      host,
+      port,
+      user,
+      password,
+      secure: false
+    });
+
+    let totalBytes = 0;
+    try {
+      totalBytes = await client.size(remotePath);
+    } catch (e) {
+      totalBytes = 0;
+    }
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-started', {
+        fileName,
+        totalBytes
+      });
+    }
+
+    client.trackProgress(info => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('download-progress', {
+          fileName,
+          receivedBytes: info.bytes,
+          totalBytes: totalBytes || info.bytes
+        });
+      }
+    });
+
+    await client.downloadTo(localPath, remotePath);
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-completed', {
+        fileName,
+        state: 'completed',
+        savePath: localPath
+      });
+    }
+  } catch (err) {
+    console.error('Erro no download FTP do Vortex:', err);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-completed', {
+        fileName,
+        state: 'interrupted',
+        savePath: ''
+      });
+    }
+  } finally {
+    if (client) {
+      try { client.close(); } catch (e) {}
+    }
+  }
+}
+
+// Inicia download HTTP/HTTPS via gerenciador de sessão do Electron
+function downloadHttpUrl(url) {
+  try {
+    session.defaultSession.downloadURL(url);
+  } catch (e) {
+    console.error('Erro ao baixar URL HTTP:', e);
+  }
+}
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    minWidth: 900,
+    minHeight: 600,
+    frame: false, // Frame customizado moderno / minimalista estilo Dev
+    backgroundColor: '#0a0d14',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      webviewTag: true, // Habilita tags <webview> para isolamento de abas
+      plugins: true     // Habilita visualizador de PDF embutido (evita abrir o Edge para PDFs)
+    }
+  });
+
+  mainWindow.loadFile('index.html');
+
+  // Configuração do Escudo de Privacidade (Privacy Shield & AdBlock)
+  const defaultSession = session.defaultSession;
+  
+  // Bloquear o Chromium de delegar protocolos e downloads para o navegador externo (Edge)
+  defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'openExternal') {
+      callback(false);
+      return;
+    }
+    callback(true);
+  });
+
+  defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    if (permission === 'openExternal') {
+      return false;
+    }
+    return true;
+  });
+
+  // Bloquear rastreadores e anúncios
+  defaultSession.webRequest.onBeforeRequest({ urls: TRACKER_BLOCK_LIST }, (details, callback) => {
+    if (!adBlockStats.enabled) {
+      callback({});
+      return;
+    }
+    adBlockStats.blockedCount++;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('tracker-blocked', { 
+        url: details.url, 
+        count: adBlockStats.blockedCount 
+      });
+    }
+    callback({ cancel: true });
+  });
+
+  // Otimização de Performance de Rede e Headers de Privacidade
+  defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    // DNT (Do Not Track) e GPC (Global Privacy Control)
+    details.requestHeaders['DNT'] = '1';
+    details.requestHeaders['Sec-GPC'] = '1';
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
+  // Gerenciador Nativo de Downloads HTTP/HTTPS do Vortex
+  defaultSession.on('will-download', (event, item, webContents) => {
+    const fileName = item.getFilename();
+    const totalBytes = item.getTotalBytes();
+
+    // Salvar diretamente na pasta Downloads do usuário sem travar em caixas de diálogo
+    const downloadsDir = app.getPath('downloads');
+    let savePath = path.join(downloadsDir, fileName);
+    let counter = 1;
+    const ext = path.extname(fileName);
+    const base = path.basename(fileName, ext);
+    while (fs.existsSync(savePath)) {
+      savePath = path.join(downloadsDir, `${base} (${counter})${ext}`);
+      counter++;
+    }
+    item.setSavePath(savePath);
+    
+    // Notifica início do download
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-started', {
+        fileName,
+        totalBytes
+      });
+    }
+
+    item.on('updated', (event, state) => {
+      if (state === 'progressing') {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('download-progress', {
+            fileName,
+            receivedBytes: item.getReceivedBytes(),
+            totalBytes: item.getTotalBytes()
+          });
+        }
+      }
+    });
+
+    item.once('done', (event, state) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('download-completed', {
+          fileName,
+          state, // 'completed', 'cancelled', 'interrupted'
+          savePath: item.getSavePath()
+        });
+      }
+    });
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+// IPC Controls da Janela Customizada
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.on('window-close', () => {
+  if (mainWindow) mainWindow.close();
+});
+
+ipcMain.on('get-block-stats', (event) => {
+  event.returnValue = adBlockStats;
+});
+
+// Posição física e instantânea do mouse relativo à janela Vortex para o menu de contexto abrir exatamente na ponta da seta (igual ao Chrome)
+function resolveCursorPoint() {
+  try {
+    const point = screen.getCursorScreenPoint();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const winBounds = mainWindow.getContentBounds ? mainWindow.getContentBounds() : mainWindow.getBounds();
+      return { 
+        x: Math.round(point.x - winBounds.x), 
+        y: Math.round(point.y - winBounds.y) 
+      };
+    }
+    return point;
+  } catch (e) {
+    return null;
+  }
+}
+
+ipcMain.on('get-cursor-point', (event) => {
+  event.returnValue = resolveCursorPoint();
+});
+
+ipcMain.handle('get-cursor-point', async () => {
+  return resolveCursorPoint();
+});
+
+ipcMain.on('set-adblock-enabled', (event, enabled) => {
+  adBlockStats.enabled = !!enabled;
+});
+
+ipcMain.handle('get-downloads-path', () => {
+  return app.getPath('downloads');
+});
+
+// IPC para acionar download FTP
+ipcMain.on('download-ftp', (event, url) => {
+  if (url) downloadFtpUrl(url);
+});
+
+// IPC para acionar download HTTP
+ipcMain.on('download-url', (event, url) => {
+  if (url) downloadHttpUrl(url);
+});
+
+// IPC para mostrar arquivo baixado na pasta
+ipcMain.on('show-item-in-folder', (event, fullPath) => {
+  if (fullPath && fs.existsSync(fullPath)) {
+    shell.showItemInFolder(fullPath);
+  } else {
+    shell.openPath(app.getPath('downloads'));
+  }
+});
+
+// IPC para abrir arquivo baixado
+ipcMain.on('open-path', (event, fullPath) => {
+  if (fullPath && fs.existsSync(fullPath)) {
+    shell.openPath(fullPath);
+  }
+});
+
+
+
+// Limpeza de rastros ao fechar / modo privado
+ipcMain.on('clear-browsing-data', async (event) => {
+  await session.defaultSession.clearStorageData({
+    storages: ['cookies', 'localstorage', 'cache']
+  });
+  event.sender.send('browsing-data-cleared');
+});
+
+// Abertura de nova janela isolada
+ipcMain.on('open-new-window', () => {
+  createWindow();
+});
+
+// ── IPC Handlers: Gerenciador de Senhas e Sincronização por E-mail ─────
+ipcMain.handle('get-saved-passwords', () => {
+  return loadPasswords();
+});
+
+ipcMain.handle('save-password', (event, entry) => {
+  if (!entry || !entry.url || !entry.password) return { success: false };
+  const list = loadPasswords();
+  const index = list.findIndex(item => item.url === entry.url && item.username === entry.username);
+  const now = Date.now();
+  if (index >= 0) {
+    list[index] = { ...list[index], ...entry, updatedAt: now };
+  } else {
+    list.push({
+      id: 'pwd_' + now + '_' + Math.random().toString(36).slice(2, 7),
+      url: entry.url,
+      domain: entry.domain || (new URL(entry.url).hostname),
+      username: entry.username || '',
+      password: entry.password,
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  const ok = savePasswords(list);
+  return { success: ok, passwords: list };
+});
+
+ipcMain.handle('delete-password', (event, id) => {
+  let list = loadPasswords();
+  list = list.filter(item => item.id !== id);
+  const ok = savePasswords(list);
+  return { success: ok, passwords: list };
+});
+
+ipcMain.handle('get-user-profile', () => {
+  // Retorna APENAS o perfil salvo pelo próprio usuário no Vortex.
+  // NUNCA lê dados de outros navegadores automaticamente.
+  // O usuário deve conectar seu perfil manualmente pela interface.
+  return loadUserProfile();
+});
+
+ipcMain.handle('sync-chrome-data', () => {
+  try {
+    const chromeUserData = path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'User Data');
+    const defaultProfile = path.join(chromeUserData, 'Default');
+    const prefFile = path.join(defaultProfile, 'Preferences');
+    const bookmarksFile = path.join(defaultProfile, 'Bookmarks');
+    const photoFile = path.join(defaultProfile, 'Google Profile Picture.png');
+
+    let profile = loadUserProfile();
+    let importedBookmarks = [];
+    let photoData = '';
+
+    // 1. Extrair foto do perfil
+    if (fs.existsSync(photoFile)) {
+      const imgBuf = fs.readFileSync(photoFile);
+      if (imgBuf && imgBuf.length > 0) {
+        photoData = `data:image/png;base64,${imgBuf.toString('base64')}`;
+        profile.photoUrl = photoData;
+      }
+    }
+
+    // 2. Extrair dados da conta Google logada no Chrome
+    if (fs.existsSync(prefFile)) {
+      const prefData = JSON.parse(fs.readFileSync(prefFile, 'utf8'));
+      const acc = prefData.account_info?.[0] || {};
+      const foundEmail = acc.email || prefData.google?.services?.signin?.email;
+      const foundName = acc.full_name || prefData.profile?.name;
+      if (foundEmail) {
+        profile.email = foundEmail;
+        profile.name = foundName || foundEmail.split('@')[0];
+        profile.syncEnabled = true;
+      }
+      if (!photoData && acc.picture_url) {
+        profile.photoUrl = acc.picture_url;
+      }
+      saveUserProfile(profile);
+    }
+
+    // 3. Extrair Favoritos
+    if (fs.existsSync(bookmarksFile)) {
+      const bData = JSON.parse(fs.readFileSync(bookmarksFile, 'utf8'));
+      function extract(node, list = []) {
+        if (!node) return list;
+        if (node.type === 'url' && node.url) {
+          list.push({ title: node.name || node.url, url: node.url, icon: '⭐' });
+        }
+        if (Array.isArray(node.children)) {
+          node.children.forEach(c => extract(c, list));
+        }
+        return list;
+      }
+      const b1 = extract(bData.roots?.bookmark_bar);
+      const b2 = extract(bData.roots?.other);
+      importedBookmarks = [...b1, ...b2];
+    }
+
+    return {
+      success: true,
+      profile,
+      bookmarks: importedBookmarks,
+      bookmarksCount: importedBookmarks.length
+    };
+  } catch(err) {
+    console.error('Erro ao sincronizar dados do Chrome:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('save-user-profile', (event, profile) => {
+  const current = loadUserProfile();
+  const updated = { ...current, ...profile, lastSync: Date.now() };
+  const ok = saveUserProfile(updated);
+  return { success: ok, profile: updated };
+});
+
+ipcMain.handle('export-vault', () => {
+  const passwords = loadPasswords();
+  const profile = loadUserProfile();
+  const vaultPayload = {
+    vortexVersion: app.getVersion(),
+    exportDate: new Date().toISOString(),
+    profile,
+    passwords
+  };
+  return JSON.stringify(vaultPayload, null, 2);
+});
+
+ipcMain.handle('import-vault', (event, jsonString) => {
+  try {
+    const data = JSON.parse(jsonString);
+    if (Array.isArray(data.passwords)) {
+      const current = loadPasswords();
+      const map = new Map();
+      current.forEach(p => map.set(`${p.domain || p.url}_${p.username}`, p));
+      data.passwords.forEach(p => {
+        const key = `${p.domain || p.url}_${p.username}`;
+        map.set(key, { ...p, id: p.id || ('pwd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)) });
+      });
+      const merged = Array.from(map.values());
+      savePasswords(merged);
+      if (data.profile && data.profile.email) {
+        saveUserProfile(data.profile);
+      }
+      return { success: true, count: merged.length };
+    }
+  } catch (e) {
+    console.error('Erro ao importar cofre:', e);
+  }
+  return { success: false, count: 0 };
+});
+
+
+// ── Modo Anônimo / Privado ───────────────────────────────────────────
+// Cada chamada cria uma partição única completamente isolada:
+//   - Sem cookies persistentes, sem cache, sem localStorage, sem sessão salva
+//   - Bloqueio de rastreadores igual ao modo normal
+//   - Não aparece no histórico
+
+ipcMain.on('open-private-tab', (event, initialUrl) => {
+  // Gera uma partição única para este tab anônimo (memória volátil, sem persistência)
+  const partitionId = `incognito-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const privateSession = session.fromPartition(partitionId, { cache: false });
+  activePrivateSessions.add(privateSession);
+
+  // Aplica proxy da VPN caso já esteja conectada
+  if (vpnState.connected && vpnState.proxyHost && vpnState.proxyPort) {
+    privateSession.setProxy({ proxyRules: `socks5://${vpnState.proxyHost}:${vpnState.proxyPort}` }).catch(() => {});
+  }
+
+  // Copiar bloqueio de rastreadores para a sessão anônima
+  privateSession.webRequest.onBeforeRequest({ urls: TRACKER_BLOCK_LIST }, (details, callback) => {
+    if (!adBlockStats.enabled) { callback({}); return; }
+    adBlockStats.blockedCount++;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('tracker-blocked', { url: details.url, count: adBlockStats.blockedCount });
+    }
+    callback({ cancel: true });
+  });
+
+  // Aplicar headers de privacidade na sessão anônima
+  privateSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders['DNT'] = '1';
+    details.requestHeaders['Sec-GPC'] = '1';
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
+  // Gerenciar downloads na sessão anônima
+  privateSession.on('will-download', (ev, item) => {
+    const fileName = item.getFilename();
+    const totalBytes = item.getTotalBytes();
+    const downloadsDir = app.getPath('downloads');
+    let savePath = path.join(downloadsDir, fileName);
+    let counter = 1;
+    const ext = path.extname(fileName);
+    const base = path.basename(fileName, ext);
+    while (fs.existsSync(savePath)) {
+      savePath = path.join(downloadsDir, `${base} (${counter})${ext}`);
+      counter++;
+    }
+    item.setSavePath(savePath);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-started', { fileName, totalBytes });
+    }
+    item.on('updated', (e2, state) => {
+      if (state === 'progressing' && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('download-progress', {
+          fileName, receivedBytes: item.getReceivedBytes(), totalBytes: item.getTotalBytes()
+        });
+      }
+    });
+    item.once('done', (e2, state) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('download-completed', {
+          fileName, state, savePath: item.getSavePath ? item.getSavePath() : savePath
+        });
+      }
+    });
+  });
+
+  // Informar o renderer qual partição usar e qual URL carregar
+  if (!event.sender.isDestroyed()) {
+    event.sender.send('private-tab-ready', {
+      partition: partitionId,
+      url: initialUrl || null
+    });
+  }
+});
+
+
+// ── VPN Gratuita Integrada (Vortex Secure Tunnel) ────────────────────────
+// Usa servidores SOCKS5/HTTP dinâmicos testados em tempo real por região.
+// 100% gratuito, sem cadastro ou chaves de API.
+let vpnState = {
+  connected: false,
+  region: 'auto',
+  proxyHost: null,
+  proxyPort: null,
+  protocol: 'direct'
+};
+
+const activePrivateSessions = new Set();
+
+function testSocks5Connection(ip, port, timeoutMs = 2500) {
+  return new Promise((resolve) => {
+    const s = net.createConnection({ host: ip, port: parseInt(port, 10), timeout: timeoutMs });
+    s.on('connect', () => { s.write(Buffer.from([0x05, 0x01, 0x00])); });
+    s.on('data', (d) => { s.destroy(); resolve(d[0] === 0x05 && d[1] === 0x00); });
+    s.on('error', () => resolve(false));
+    s.on('timeout', () => { s.destroy(); resolve(false); });
+  });
+}
+
+function fetchLiveRegionalProxy(regionCode) {
+  return new Promise((resolve) => {
+    const url = (!regionCode || regionCode === 'auto')
+      ? 'https://proxmint.com/api/free-proxies?protocol=socks5&pageSize=8'
+      : `https://proxmint.com/api/free-proxies?protocol=socks5&country=${encodeURIComponent(regionCode)}&pageSize=8`;
+
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4000 }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', async () => {
+        try {
+          const json = JSON.parse(data);
+          const candidates = json.rows || [];
+          for (const cand of candidates) {
+            const isAlive = await testSocks5Connection(cand.ip, cand.port, 2000);
+            if (isAlive) {
+              resolve({ host: cand.ip, port: cand.port, protocol: 'socks5', country: cand.countryCode });
+              return;
+            }
+          }
+        } catch (e) {}
+        resolve(null);
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+  });
+}
+
+async function applyProxyToAllSessions(proxyConfig) {
+  const sessionsToUpdate = [session.defaultSession, ...activePrivateSessions];
+  for (const sess of sessionsToUpdate) {
+    try {
+      if (sess && !sess.isDestroyed?.()) {
+        await sess.setProxy(proxyConfig);
+      }
+    } catch (e) {
+      console.error('Erro ao aplicar proxy na sessão:', e);
+    }
+  }
+}
+
+ipcMain.handle('set-vpn-proxy', async (event, { enable, region }) => {
+  try {
+    if (enable) {
+      // 1. Tenta resolver um servidor ativo dinamicamente com teste de conexão SOCKS5
+      let liveServer = await fetchLiveRegionalProxy(region);
+      
+      // 2. Se a região específica não tiver resposta em 4s, tenta a melhor localização (auto)
+      if (!liveServer && region !== 'auto') {
+        liveServer = await fetchLiveRegionalProxy('auto');
+      }
+
+      // 3. Fallback estável de contingência
+      if (!liveServer) {
+        liveServer = { host: '107.174.30.92', port: 1080, protocol: 'socks5', country: 'us' };
+      }
+
+      const proxyRules = `socks5://${liveServer.host}:${liveServer.port}`;
+      await applyProxyToAllSessions({ proxyRules });
+
+      vpnState = {
+        connected: true,
+        region: region || 'auto',
+        proxyHost: liveServer.host,
+        proxyPort: liveServer.port,
+        protocol: liveServer.protocol
+      };
+    } else {
+      await applyProxyToAllSessions({ proxyRules: 'direct://' });
+      vpnState = {
+        connected: false,
+        region: region || 'auto',
+        proxyHost: null,
+        proxyPort: null,
+        protocol: 'direct'
+      };
+    }
+    return { success: true, ...vpnState };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('get-vpn-status', async () => {
+  return { success: true, ...vpnState };
+});
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+// ── DevTools Acoplado — Electron 33+ (setDevToolsWebContents foi removido no Electron 28+)
+// Usa openDevTools({ mode: 'right' }) que é o método oficial suportado.
+// O DevTools abre nativo do Chromium acoplado à direita da webview, igual ao Chrome.
+
+ipcMain.handle('dock-devtools', async (event, { targetWebContentsId, devtoolsWebContentsId, x, y }) => {
+  try {
+    const targetWc = webContents.fromId(targetWebContentsId);
+    if (!targetWc || targetWc.isDestroyed()) {
+      return { success: false, error: 'WebContents não encontrado' };
+    }
+
+    let dockedInContainer = false;
+    if (devtoolsWebContentsId) {
+      const devtoolsWc = webContents.fromId(devtoolsWebContentsId);
+      if (devtoolsWc && !devtoolsWc.isDestroyed() && typeof targetWc.setDevToolsWebContents === 'function') {
+        try {
+          targetWc.setDevToolsWebContents(devtoolsWc);
+          targetWc.openDevTools();
+          dockedInContainer = true;
+        } catch (e) {
+          console.warn('setDevToolsWebContents falhou, usando modo dock lateral:', e.message);
+        }
+      }
+    }
+
+    if (!dockedInContainer) {
+      targetWc.openDevTools({ mode: 'right' });
+    }
+
+    if (typeof x === 'number' && typeof y === 'number') {
+      const px = Math.max(0, Math.round(x));
+      const py = Math.max(0, Math.round(y));
+      setTimeout(() => {
+        try {
+          if (!targetWc.isDestroyed()) targetWc.inspectElement(px, py);
+        } catch (e) {}
+      }, 150);
+    }
+    return { success: true, dockedInContainer };
+  } catch (err) {
+    console.error('Erro ao acoplar DevTools:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('open-devtools', async (event, { targetWebContentsId, mode, x, y }) => {
+  try {
+    const targetWc = webContents.fromId(targetWebContentsId);
+    if (!targetWc || targetWc.isDestroyed()) {
+      return { success: false, error: 'WebContents não encontrado' };
+    }
+    const devMode = mode || 'detach';
+    if (typeof x === 'number' && typeof y === 'number') {
+      targetWc.openDevTools({ mode: devMode });
+      const px = Math.max(0, Math.round(x));
+      const py = Math.max(0, Math.round(y));
+      setTimeout(() => {
+        try {
+          if (!targetWc.isDestroyed()) targetWc.inspectElement(px, py);
+        } catch(e) {}
+      }, 150);
+    } else {
+      targetWc.openDevTools({ mode: devMode });
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Erro ao abrir DevTools:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('close-devtools', async (event, { targetWebContentsId }) => {
+  try {
+    const targetWc = webContents.fromId(targetWebContentsId);
+    if (targetWc && !targetWc.isDestroyed()) {
+      targetWc.closeDevTools();
+      return { success: true };
+    }
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+  return { success: false };
+});
+
+ipcMain.handle('is-devtools-open', async (event, { targetWebContentsId }) => {
+  try {
+    const targetWc = webContents.fromId(targetWebContentsId);
+    if (targetWc && !targetWc.isDestroyed()) {
+      return { open: targetWc.isDevToolsOpened() };
+    }
+  } catch (err) {}
+  return { open: false };
+});
+
+// ── Sistema de Atualizações Automáticas (Auto-Updater / GitHub Releases) ──
+function setupAutoUpdater() {
+  if (!autoUpdater) return;
+
+  // Não fazer download automático silencioso sem consentimento (estilo Chrome: avisa primeiro)
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[AutoUpdater] Verificando se há novas atualizações...');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Nova versão encontrada:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-available', {
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes || ''
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[AutoUpdater] Vortex já está na versão mais recente:', info?.version);
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.warn('[AutoUpdater] Aviso ao verificar atualização:', err.message);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-download-progress', {
+        percent: Math.round(progress.percent || 0),
+        bytesPerSecond: progress.bytesPerSecond,
+        transferred: progress.transferred,
+        total: progress.total
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Nova versão baixada e pronta para instalar:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-downloaded', {
+        version: info.version
+      });
+    }
+  });
+}
+
+ipcMain.handle('check-for-updates', async () => {
+  if (!autoUpdater) return { success: false, error: 'Módulo de atualização não disponível' };
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return {
+      success: true,
+      updateAvailable: !!(result && result.updateInfo && result.updateInfo.version !== app.getVersion()),
+      version: result?.updateInfo?.version || null,
+      currentVersion: app.getVersion()
+    };
+  } catch (err) {
+    console.warn('[AutoUpdater] Verificação manual falhou:', err.message);
+    return { success: false, error: err.message, currentVersion: app.getVersion() };
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  if (!autoUpdater) return { success: false, error: 'Módulo de atualização não disponível' };
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('install-update', () => {
+  if (!autoUpdater) return { success: false };
+  try {
+    autoUpdater.quitAndInstall(false, true);
+    return { success: true };
+  } catch (err) {
+    console.error('Erro ao reiniciar para instalar atualização:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+app.whenReady().then(() => {
+  createWindow();
+  setupAutoUpdater();
+
+  // Em produção, verifica atualizações após 3 segundos da inicialização
+  setTimeout(() => {
+    try {
+      if (app.isPackaged && autoUpdater) {
+        autoUpdater.checkForUpdates().catch(err => {
+          console.warn('[AutoUpdater] Verificação em background falhou:', err.message);
+        });
+      }
+    } catch(e) {}
+  }, 3500);
+
+  // Garante que todas as janelas/popups e navegações em webviews fiquem dentro do Vortex
+  app.on('web-contents-created', (event, contents) => {
+    // Intercepta window.open ou links com target="_blank"
+    contents.setWindowOpenHandler(({ url }) => {
+      // Permitir URLs internas do DevTools
+      if (url.startsWith('devtools://') || url.startsWith('chrome-devtools://')) {
+        return { action: 'allow' };
+      }
+      if (url.startsWith('ftp://')) {
+        downloadFtpUrl(url);
+        return { action: 'deny' };
+      }
+      if (isDownloadableUrl(url)) {
+        downloadHttpUrl(url);
+        return { action: 'deny' };
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('open-in-new-tab', url);
+      }
+      return { action: 'deny' };
+    });
+
+    // Intercepta navegações diretas para evitar que o SO repasse para o navegador padrão (Edge)
+    contents.on('will-navigate', (event, url) => {
+      if (url.startsWith('ftp://')) {
+        event.preventDefault();
+        downloadFtpUrl(url);
+        return;
+      }
+      if (isDownloadableUrl(url)) {
+        event.preventDefault();
+        downloadHttpUrl(url);
+        return;
+      }
+    });
+  });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
