@@ -28,14 +28,34 @@ if (!process.env.GH_TOKEN) {
   process.exit(1);
 }
 
-// 2. Incrementa a versão no package.json
-console.log('[1/4] Incrementando versão de patch...');
+// 2. Incrementa a versão no package.json (suporta minor/major quando for grande atualização)
+const arg = process.argv[2];
 const pkgPath = path.join(__dirname, 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 const parts = pkg.version.split('.').map(n => parseInt(n, 10));
-parts[2] += 1;
+
+let newVer = '';
+if (arg === 'minor') {
+  parts[1] += 1;
+  parts[2] = 0;
+  newVer = parts.join('.');
+  console.log('[1/4] Grande atualização (Minor release)...');
+} else if (arg === 'major') {
+  parts[0] += 1;
+  parts[1] = 0;
+  parts[2] = 0;
+  newVer = parts.join('.');
+  console.log('[1/4] Atualização Maior (Major release)...');
+} else if (arg && /^\d+\.\d+\.\d+$/.test(arg)) {
+  newVer = arg;
+  console.log(`[1/4] Definindo versão específica para ${newVer}...`);
+} else {
+  parts[2] += 1;
+  newVer = parts.join('.');
+  console.log('[1/4] Incrementando versão de patch...');
+}
+
 const oldVer = pkg.version;
-const newVer = parts.join('.');
 pkg.version = newVer;
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
 console.log(`Versão: ${oldVer} -> ${newVer}`);
