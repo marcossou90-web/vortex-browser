@@ -12,8 +12,16 @@ try {
   console.warn('electron-updater não disponível no momento:', e.message);
 }
 
-// Evitar conflitos de permissão e erros de cache no Windows (Acesso negado 0x5)
+// Evitar conflitos de permissão e otimizar velocidade de rede e renderização
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+// Flags de aceleração de carregamento de páginas Web / SPA (Dio.me, etc)
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-quic');
+app.commandLine.appendSwitch('enable-tcp-fast-open');
+app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess,ParallelDownloading,CanvasOopRasterization');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+
 const vortexDataDir = path.join(app.getPath('appData'), 'VortexBrowserData');
 try {
   if (!fs.existsSync(vortexDataDir)) {
@@ -428,8 +436,8 @@ function initDefaultSession() {
     details.requestHeaders['DNT'] = '1';
     details.requestHeaders['Sec-GPC'] = '1';
     
-    // Para contas Google e serviços que bloqueiam Electron, garantir User-Agent limpo
-    if (details.url.includes('google.com') || details.url.includes('accounts.google')) {
+    // Envia User-Agent de Chrome moderno padrão para evitar que plataformas como DIO/NextJS throttlem ou usem fallbacks lentos
+    if (!details.requestHeaders['User-Agent'] || details.requestHeaders['User-Agent'].includes('Electron')) {
       details.requestHeaders['User-Agent'] = cleanChromeUA;
     }
     
@@ -1362,6 +1370,10 @@ app.whenReady().then(() => {
       webPreferences.nodeIntegrationInSubFrames = false;
       webPreferences.contextIsolation = true;
       webPreferences.sandbox = true;
+      webPreferences.backgroundThrottling = false; // Não congelar requisições em segundo plano ou carregamento
+      webPreferences.images = true;
+      webPreferences.webgl = true;
+      webPreferences.spellcheck = false; // Evita overhead de checagem ortográfica durante render pesado de SPAs
     });
 
     // Intercepta window.open ou links com target="_blank"
