@@ -300,6 +300,12 @@ function createIncognitoTabWithPartition(partition, initialUrl) {
     }
   });
 
+  tabEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showTabContextMenu(e.clientX, e.clientY, id);
+  });
+
   tabsListEl.appendChild(tabEl);
 
   // Webview com partição anônima isolada
@@ -745,6 +751,12 @@ function createTab(initialUrl = null) {
     } else {
       switchTab(id);
     }
+  });
+
+  tabEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showTabContextMenu(e.clientX, e.clientY, id);
   });
 
   tabsListEl.appendChild(tabEl);
@@ -3700,4 +3712,595 @@ if (window.vortexAPI?.getUserProfile) {
     });
   }
 })();
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 1: RECURSOS MODERNOS DE NAVEGAÇÃO
+// 1. Fixar Abas & Menu de Contexto da Aba
+// 2. Gerador de QR Code
+// 3. Captura de Tela Nativa
+// 4. Barra de Comandos Rápida (Ctrl+K)
+// ══════════════════════════════════════════════════════════════════
+
+// ── 1. Fixar Abas & Menu de Contexto ──────────────────────────────
+let contextMenuTargetTabId = null;
+const tabContextMenuEl = document.getElementById('tabContextMenu');
+const menuPinTabEl = document.getElementById('menuPinTab');
+const menuPinTabTextEl = document.getElementById('menuPinTabText');
+const menuDuplicateTabEl = document.getElementById('menuDuplicateTab');
+const menuReloadTabEl = document.getElementById('menuReloadTab');
+const menuCloseOtherTabsEl = document.getElementById('menuCloseOtherTabs');
+const menuCloseThisTabEl = document.getElementById('menuCloseThisTab');
+
+function showTabContextMenu(x, y, tabId) {
+  contextMenuTargetTabId = tabId;
+  const targetTab = tabs.find(t => t.id === tabId);
+  if (!targetTab) return;
+
+  if (menuPinTabTextEl) {
+    menuPinTabTextEl.textContent = targetTab.isPinned ? 'Desafixar Aba' : 'Fixar Aba';
+  }
+
+  if (tabContextMenuEl) {
+    tabContextMenuEl.style.display = 'block';
+    const menuWidth = 180;
+    const menuHeight = 170;
+    const maxX = window.innerWidth - menuWidth - 10;
+    const maxY = window.innerHeight - menuHeight - 10;
+    tabContextMenuEl.style.left = `${Math.min(x, maxX)}px`;
+    tabContextMenuEl.style.top = `${Math.min(y, maxY)}px`;
+  }
+}
+
+function hideTabContextMenu() {
+  if (tabContextMenuEl) tabContextMenuEl.style.display = 'none';
+  contextMenuTargetTabId = null;
+}
+
+document.addEventListener('click', (e) => {
+  if (tabContextMenuEl && !tabContextMenuEl.contains(e.target)) {
+    hideTabContextMenu();
+  }
+});
+
+function togglePinTab(tabId) {
+  const targetTab = tabs.find(t => t.id === tabId);
+  if (!targetTab) return;
+
+  targetTab.isPinned = !targetTab.isPinned;
+  if (targetTab.isPinned) {
+    targetTab.tabEl.classList.add('pinned');
+    targetTab.tabEl.title = `📌 ${targetTab.title || 'Aba Fixada'}`;
+    // Mover aba fixada para a esquerda entre as primeiras da lista
+    const firstNonPinned = tabs.find(t => !t.isPinned && t.id !== targetTab.id);
+    if (firstNonPinned && firstNonPinned.tabEl) {
+      tabsListEl.insertBefore(targetTab.tabEl, firstNonPinned.tabEl);
+    }
+    showToastNotification('📌', 'Aba Fixada', targetTab.title || 'Aba compactada com sucesso');
+  } else {
+    targetTab.tabEl.classList.remove('pinned');
+    targetTab.tabEl.title = targetTab.title || '';
+    showToastNotification('📌', 'Aba Desafixada', targetTab.title || '');
+  }
+}
+
+menuPinTabEl?.addEventListener('click', () => {
+  if (contextMenuTargetTabId) togglePinTab(contextMenuTargetTabId);
+  hideTabContextMenu();
+});
+
+menuDuplicateTabEl?.addEventListener('click', () => {
+  if (contextMenuTargetTabId) {
+    const t = tabs.find(tab => tab.id === contextMenuTargetTabId);
+    if (t && t.url) createTab(t.url);
+  }
+  hideTabContextMenu();
+});
+
+menuReloadTabEl?.addEventListener('click', () => {
+  if (contextMenuTargetTabId) {
+    const t = tabs.find(tab => tab.id === contextMenuTargetTabId);
+    if (t && t.webview && typeof t.webview.reload === 'function') t.webview.reload();
+  }
+  hideTabContextMenu();
+});
+
+menuCloseOtherTabsEl?.addEventListener('click', () => {
+  if (contextMenuTargetTabId) {
+    const toClose = tabs.filter(t => t.id !== contextMenuTargetTabId && !t.isPinned).map(t => t.id);
+    toClose.forEach(id => closeTab(id));
+  }
+  hideTabContextMenu();
+});
+
+menuCloseThisTabEl?.addEventListener('click', () => {
+  if (contextMenuTargetTabId) closeTab(contextMenuTargetTabId);
+  hideTabContextMenu();
+});
+
+// ── 2. Gerador de QR Code Nativo ─────────────────────────────────
+const btnQrCodeEl = document.getElementById('btnQrCode');
+const qrCodeModalEl = document.getElementById('qrCodeModal');
+const btnCloseQrModalEl = document.getElementById('btnCloseQrModal');
+const btnCloseQrModalActionEl = document.getElementById('btnCloseQrModalAction');
+const qrCodeImageEl = document.getElementById('qrCodeImage');
+const qrPageUrlTextEl = document.getElementById('qrPageUrlText');
+const btnCopyQrUrlEl = document.getElementById('btnCopyQrUrl');
+
+function openQrCodeModal() {
+  const activeTab = getActiveTab();
+  const currentUrl = activeTab?.url || addressInputEl.value || '';
+  if (!currentUrl || currentUrl.startsWith('about:') || currentUrl.startsWith('vortex://')) {
+    showToastNotification('ℹ️', 'QR Code', 'Navegue para um site na web para gerar o QR Code.');
+    return;
+  }
+
+  if (qrPageUrlTextEl) qrPageUrlTextEl.textContent = currentUrl;
+  if (qrCodeImageEl) {
+    // API pública e gratuita para geração instantânea de QR Code
+    qrCodeImageEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(currentUrl)}`;
+  }
+  if (qrCodeModalEl) qrCodeModalEl.classList.add('active');
+}
+
+function closeQrCodeModal() {
+  if (qrCodeModalEl) qrCodeModalEl.classList.remove('active');
+}
+
+btnQrCodeEl?.addEventListener('click', openQrCodeModal);
+btnCloseQrModalEl?.addEventListener('click', closeQrCodeModal);
+btnCloseQrModalActionEl?.addEventListener('click', closeQrCodeModal);
+btnCopyQrUrlEl?.addEventListener('click', () => {
+  const activeTab = getActiveTab();
+  const currentUrl = activeTab?.url || addressInputEl.value || '';
+  if (currentUrl) {
+    navigator.clipboard.writeText(currentUrl).then(() => {
+      showToastNotification('📋', 'Link Copiado', 'Endereço copiado para a área de transferência.');
+      closeQrCodeModal();
+    });
+  }
+});
+
+// ── 3. Captura de Tela Nativa (Screenshot) ────────────────────────
+const btnScreenshotEl = document.getElementById('btnScreenshot');
+const screenshotModalEl = document.getElementById('screenshotModal');
+const btnCloseScreenshotModalEl = document.getElementById('btnCloseScreenshotModal');
+const screenshotPreviewImgEl = document.getElementById('screenshotPreviewImg');
+const btnCopyScreenshotClipboardEl = document.getElementById('btnCopyScreenshotClipboard');
+const btnSaveScreenshotFileEl = document.getElementById('btnSaveScreenshotFile');
+
+let currentScreenshotDataUrl = null;
+
+async function captureActivePage() {
+  const activeTab = getActiveTab();
+  if (!activeTab || !activeTab.webview) {
+    showToastNotification('ℹ️', 'Captura de Tela', 'Abra uma página web para capturar a tela.');
+    return;
+  }
+
+  showToastNotification('📸', 'Capturando tela...', 'Processando imagem da página...');
+  try {
+    const targetWcId = activeTab.webview.getWebContentsId ? activeTab.webview.getWebContentsId() : null;
+    let res = null;
+    if (window.vortexAPI?.capturePage) {
+      res = await window.vortexAPI.capturePage({ targetWebContentsId: targetWcId });
+    }
+    if (res && res.success && res.dataUrl) {
+      currentScreenshotDataUrl = res.dataUrl;
+      if (screenshotPreviewImgEl) screenshotPreviewImgEl.src = res.dataUrl;
+      if (screenshotModalEl) screenshotModalEl.classList.add('active');
+    } else {
+      showToastNotification('⚠️', 'Falha na Captura', res?.error || 'Não foi possível capturar a página.', true);
+    }
+  } catch (err) {
+    showToastNotification('⚠️', 'Erro', err.message, true);
+  }
+}
+
+function closeScreenshotModal() {
+  if (screenshotModalEl) screenshotModalEl.classList.remove('active');
+  currentScreenshotDataUrl = null;
+}
+
+btnScreenshotEl?.addEventListener('click', captureActivePage);
+btnCloseScreenshotModalEl?.addEventListener('click', closeScreenshotModal);
+
+btnCopyScreenshotClipboardEl?.addEventListener('click', async () => {
+  if (!currentScreenshotDataUrl) return;
+  try {
+    const res = await fetch(currentScreenshotDataUrl);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    showToastNotification('📋', 'Imagem Copiada', 'Captura copiada para a área de transferência!');
+    closeScreenshotModal();
+  } catch(e) {
+    showToastNotification('⚠️', 'Erro ao copiar', 'Não foi possível copiar diretamente para a área de transferência.', true);
+  }
+});
+
+btnSaveScreenshotFileEl?.addEventListener('click', async () => {
+  if (!currentScreenshotDataUrl) return;
+  const activeTab = getActiveTab();
+  let hostName = 'pagina';
+  try {
+    if (activeTab?.url) hostName = new URL(activeTab.url).hostname.replace(/[^a-zA-Z0-9]/g, '_');
+  } catch(e) {}
+  const fileName = `Vortex_${hostName}_${Date.now()}.png`;
+
+  if (window.vortexAPI?.saveScreenshotDialog) {
+    const res = await window.vortexAPI.saveScreenshotDialog({
+      dataUrl: currentScreenshotDataUrl,
+      defaultName: fileName
+    });
+    if (res && res.success) {
+      showToastNotification('💾', 'Imagem Salva', `Salvo com sucesso em: ${res.path}`);
+      closeScreenshotModal();
+    }
+  }
+});
+
+// ── 4. Barra de Comandos Rápida (Command Palette - Ctrl+K) ────────
+const commandPaletteOverlayEl = document.getElementById('commandPaletteOverlay');
+const commandPaletteInputEl = document.getElementById('commandPaletteInput');
+const commandPaletteResultsEl = document.getElementById('commandPaletteResults');
+
+const COMMAND_ACTIONS = [
+  { id: 'new-tab', title: 'Nova Guia', category: 'Navegação', icon: '➕', hint: 'Ctrl+T', action: () => createTab() },
+  { id: 'new-incognito', title: 'Nova Guia Anônima', category: 'Privacidade', icon: '🕶️', hint: 'Ctrl+Shift+N', action: () => openIncognitoTab() },
+  { id: 'settings', title: 'Abrir Configurações', category: 'Preferências', icon: '⚙️', hint: 'vortex://configuracoes', action: () => openSettingsTab() },
+  { id: 'history', title: 'Histórico de Navegação', category: 'Navegação', icon: '📜', hint: 'Ctrl+H', action: () => openHistoryTab() },
+  { id: 'bookmarks', title: 'Gerenciador de Favoritos', category: 'Favoritos', icon: '⭐', hint: 'Ctrl+Shift+O', action: () => openBookmarksTab() },
+  { id: 'passwords', title: 'Senhas Salvas & Cofre', category: 'Segurança', icon: '🔑', hint: 'Vortex Vault', action: () => openPasswordsTab() },
+  { id: 'extensions', title: 'Gerenciar Extensões', category: 'Extensões', icon: '🧩', hint: 'vortex://extensoes', action: () => openExtensionsTab() },
+  { id: 'screenshot', title: 'Capturar Tela da Página', category: 'Ferramentas', icon: '📸', hint: 'Screenshot', action: () => captureActivePage() },
+  { id: 'qrcode', title: 'Abrir QR Code no Celular', category: 'Ferramentas', icon: '📱', hint: 'Compartilhar', action: () => openQrCodeModal() },
+  { id: 'pin-tab', title: 'Fixar / Desafixar Aba Atual', category: 'Abas', icon: '📌', hint: 'Pin Tab', action: () => { if (activeTabId) togglePinTab(activeTabId); } },
+  { id: 'reopen-tab', title: 'Reabrir Aba Fechada', category: 'Abas', icon: '↩️', hint: 'Ctrl+Shift+T', action: () => restoreLastClosedTab() },
+  { id: 'clear-data', title: 'Limpar Dados de Navegação', category: 'Privacidade', icon: '🗑️', hint: 'Cache & Cookies', action: () => window.vortexAPI?.clearBrowsingData?.() },
+  { id: 'devtools', title: 'Abrir Ferramentas do Desenvolvedor', category: 'Desenvolvedor', icon: '🛠️', hint: 'F12', action: () => openDevToolsAction() },
+  { id: 'check-updates', title: 'Verificar Atualizações do Vortex', category: 'Sistema', icon: '🚀', hint: 'GitHub Releases', action: () => openSettingsTab('about') }
+];
+
+let selectedCommandIndex = 0;
+let filteredCommands = [];
+
+function openCommandPalette() {
+  if (!commandPaletteOverlayEl) return;
+  commandPaletteOverlayEl.classList.add('active');
+  if (commandPaletteInputEl) {
+    commandPaletteInputEl.value = '';
+    commandPaletteInputEl.focus();
+  }
+  renderCommandResults('');
+}
+
+function closeCommandPalette() {
+  if (commandPaletteOverlayEl) commandPaletteOverlayEl.classList.remove('active');
+}
+
+function renderCommandResults(query) {
+  if (!commandPaletteResultsEl) return;
+  const q = (query || '').toLowerCase().trim();
+  filteredCommands = [];
+
+  // 1. Pesquisa entre as Abas Abertas
+  const matchingTabs = tabs.filter(t => {
+    if (!q) return false;
+    const title = (t.title || '').toLowerCase();
+    const url = (t.url || '').toLowerCase();
+    return title.includes(q) || url.includes(q);
+  });
+
+  // 2. Pesquisa entre Comandos do Navegador
+  const matchingActions = COMMAND_ACTIONS.filter(c => {
+    if (!q) return true;
+    return c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q);
+  });
+
+  let html = '';
+  let itemCounter = 0;
+
+  if (matchingTabs.length > 0) {
+    html += `<div class="cmd-result-group-title">Abas Abertas (${matchingTabs.length})</div>`;
+    matchingTabs.forEach(t => {
+      const idx = itemCounter++;
+      filteredCommands.push({ type: 'tab', id: t.id });
+      html += `
+        <div class="cmd-item ${idx === selectedCommandIndex ? 'selected' : ''}" data-index="${idx}">
+          <div class="cmd-item-left">
+            <span class="cmd-item-icon">🗂️</span>
+            <span class="cmd-item-text">${t.title || t.url || 'Nova Aba'}</span>
+          </div>
+          <span class="cmd-item-hint">Alternar para aba</span>
+        </div>
+      `;
+    });
+  }
+
+  if (matchingActions.length > 0) {
+    html += `<div class="cmd-result-group-title">Comandos do Vortex</div>`;
+    matchingActions.forEach(c => {
+      const idx = itemCounter++;
+      filteredCommands.push({ type: 'action', item: c });
+      html += `
+        <div class="cmd-item ${idx === selectedCommandIndex ? 'selected' : ''}" data-index="${idx}">
+          <div class="cmd-item-left">
+            <span class="cmd-item-icon">${c.icon}</span>
+            <span class="cmd-item-text">${c.title}</span>
+          </div>
+          <span class="cmd-item-hint">${c.hint || c.category}</span>
+        </div>
+      `;
+    });
+  }
+
+  if (filteredCommands.length === 0) {
+    html = `<div style="padding: 24px; text-align: center; color: #64748b; font-size: 13.5px;">Nenhum comando ou aba encontrada para "<strong>${query}</strong>"</div>`;
+  }
+
+  commandPaletteResultsEl.innerHTML = html;
+
+  // Click listener nos itens
+  commandPaletteResultsEl.querySelectorAll('.cmd-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.index, 10);
+      executeCommandByIndex(idx);
+    });
+  });
+}
+
+function executeCommandByIndex(index) {
+  const item = filteredCommands[index];
+  if (!item) return;
+  closeCommandPalette();
+
+  if (item.type === 'tab') {
+    switchTab(item.id);
+  } else if (item.type === 'action' && item.item?.action) {
+    item.item.action();
+  }
+}
+
+commandPaletteInputEl?.addEventListener('input', (e) => {
+  selectedCommandIndex = 0;
+  renderCommandResults(e.target.value);
+});
+
+commandPaletteInputEl?.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (filteredCommands.length > 0) {
+      selectedCommandIndex = (selectedCommandIndex + 1) % filteredCommands.length;
+      updateSelectedCommandVisual();
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (filteredCommands.length > 0) {
+      selectedCommandIndex = (selectedCommandIndex - 1 + filteredCommands.length) % filteredCommands.length;
+      updateSelectedCommandVisual();
+    }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    executeCommandByIndex(selectedCommandIndex);
+  } else if (e.key === 'Escape') {
+    closeCommandPalette();
+  }
+});
+
+function updateSelectedCommandVisual() {
+  if (!commandPaletteResultsEl) return;
+  const items = commandPaletteResultsEl.querySelectorAll('.cmd-item');
+  items.forEach((item, idx) => {
+    if (idx === selectedCommandIndex) {
+      item.classList.add('selected');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+}
+
+commandPaletteOverlayEl?.addEventListener('click', (e) => {
+  if (e.target === commandPaletteOverlayEl) closeCommandPalette();
+});
+
+// Atalho de Teclado Global: Ctrl + K ou Ctrl + Shift + P
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    if (commandPaletteOverlayEl?.classList.contains('active')) {
+      closeCommandPalette();
+    } else {
+      openCommandPalette();
+    }
+  } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+    e.preventDefault();
+    openCommandPalette();
+  } else if (e.key === 'Escape') {
+    closeCommandPalette();
+    closeQrCodeModal();
+    closeScreenshotModal();
+    hideTabContextMenu();
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 & 3: MODO LEITURA, PICTURE-IN-PICTURE & WIDGETS
+// ══════════════════════════════════════════════════════════════════
+
+// ── 5. Modo Leitura (Reader Mode) ─────────────────────────────────
+const btnReaderModeEl = document.getElementById('btnReaderMode');
+
+function toggleReaderMode() {
+  const activeTab = getActiveTab();
+  if (!activeTab || !activeTab.webview) {
+    showToastNotification('ℹ️', 'Modo Leitura', 'Abra uma página de notícia ou artigo para ler.');
+    return;
+  }
+
+  activeTab.isReaderMode = !activeTab.isReaderMode;
+  if (btnReaderModeEl) {
+    btnReaderModeEl.style.color = activeTab.isReaderMode ? 'var(--accent-cyan)' : '';
+  }
+
+  if (activeTab.isReaderMode) {
+    activeTab.webview.executeJavaScript(`
+      (() => {
+        if (window.__vortex_reader_active) return;
+        window.__vortex_reader_active = true;
+
+        // Salvar HTML original
+        window.__vortex_original_body = document.body.innerHTML;
+        window.__vortex_original_bg = document.body.style.backgroundColor;
+
+        // Tentar capturar conteúdo principal do artigo
+        const article = document.querySelector('article') || 
+                        document.querySelector('[role="main"]') || 
+                        document.querySelector('.post-content') || 
+                        document.querySelector('.entry-content') || 
+                        document.querySelector('.article-body') || 
+                        document.querySelector('main');
+
+        const title = document.title || 'Modo Leitura Vortex';
+        const content = article ? article.innerHTML : document.body.innerHTML;
+
+        document.body.innerHTML = \`
+          <div id="__vortex_reader_container" style="
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 20px 28px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 19px;
+            line-height: 1.75;
+            color: #d1d5db;
+            background-color: #111827;
+          ">
+            <h1 style="font-size: 32px; font-weight: 700; color: #f9fafb; margin-bottom: 24px; line-height: 1.25;">\${title}</h1>
+            <div style="font-size: 18px; line-height: 1.8;">
+              \${content}
+            </div>
+          </div>
+        \`;
+        document.body.style.backgroundColor = '#111827';
+
+        // Ocultar elementos irrelevantes dentro da leitura
+        const toRemove = document.querySelectorAll('#__vortex_reader_container iframe, #__vortex_reader_container ad, #__vortex_reader_container nav, #__vortex_reader_container header, #__vortex_reader_container footer, #__vortex_reader_container script');
+        toRemove.forEach(el => el.remove());
+      })();
+    `).catch(() => {});
+    showToastNotification('📖', 'Modo Leitura Ativado', 'Formatado para leitura limpa e confortável.');
+  } else {
+    activeTab.webview.executeJavaScript(`
+      (() => {
+        if (!window.__vortex_reader_active) return;
+        window.__vortex_reader_active = false;
+        if (window.__vortex_original_body) {
+          document.body.innerHTML = window.__vortex_original_body;
+          document.body.style.backgroundColor = window.__vortex_original_bg || '';
+        }
+      })();
+    `).catch(() => {});
+    showToastNotification('📖', 'Modo Leitura Desativado', 'Página restaurada ao formato original.');
+  }
+}
+
+btnReaderModeEl?.addEventListener('click', toggleReaderMode);
+
+// ── 6. Picture-in-Picture (PiP) ───────────────────────────────────
+const btnPipEl = document.getElementById('btnPip');
+
+function togglePictureInPicture() {
+  const activeTab = getActiveTab();
+  if (!activeTab || !activeTab.webview) {
+    showToastNotification('ℹ️', 'Picture-in-Picture', 'Nenhum vídeo em reprodução detectado.');
+    return;
+  }
+
+  activeTab.webview.executeJavaScript(`
+    (() => {
+      const video = document.querySelector('video');
+      if (!video) return { success: false, error: 'Nenhum vídeo encontrado nesta página' };
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture();
+        return { success: true, mode: 'exit' };
+      } else {
+        video.requestPictureInPicture();
+        return { success: true, mode: 'enter' };
+      }
+    })();
+  `).then(res => {
+    if (res && res.success) {
+      if (res.mode === 'enter') {
+        showToastNotification('📺', 'Mini-Player Ativado', 'Vídeo em Picture-in-Picture.');
+      } else {
+        showToastNotification('📺', 'Mini-Player Desativado', 'Vídeo retornou à aba.');
+      }
+    } else {
+      showToastNotification('ℹ️', 'Picture-in-Picture', res?.error || 'Nenhum vídeo encontrado na página.');
+    }
+  }).catch(() => {
+    showToastNotification('ℹ️', 'Picture-in-Picture', 'Nenhum vídeo compatível encontrado.');
+  });
+}
+
+btnPipEl?.addEventListener('click', togglePictureInPicture);
+
+// ── 7. Widgets da Nova Guia (Relógio e Clima Minimalista) ──────────
+function initHomeWidgets() {
+  const timeEl = document.getElementById('homeClockTime');
+  const dateEl = document.getElementById('homeClockDate');
+  const tempEl = document.getElementById('homeWeatherTemp');
+  const descEl = document.getElementById('homeWeatherDesc');
+  const iconEl = document.getElementById('homeWeatherIcon');
+
+  function updateClock() {
+    const now = new Date();
+    if (timeEl) {
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      timeEl.textContent = `${h}:${m}`;
+    }
+    if (dateEl) {
+      const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+      dateEl.textContent = now.toLocaleDateString('pt-BR', opts);
+    }
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Previsão do tempo gratuita via Open-Meteo API
+  async function fetchWeather() {
+    try {
+      // Posição padrão baseada em fuso horário local ou São Paulo (exemplo neutro padrão BR)
+      const lat = -23.5505;
+      const lon = -46.6333;
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.current_weather) {
+        const temp = Math.round(data.current_weather.temperature);
+        const code = data.current_weather.weathercode;
+        if (tempEl) tempEl.textContent = `${temp}°C`;
+
+        let desc = 'Ensolarado';
+        let icon = '☀️';
+        if (code >= 1 && code <= 3) { desc = 'Parcialmente nublado'; icon = '🌤️'; }
+        else if (code >= 45 && code <= 48) { desc = 'Nevoeiro'; icon = '🌫️'; }
+        else if (code >= 51 && code <= 67) { desc = 'Chuva leve'; icon = '🌧️'; }
+        else if (code >= 71 && code <= 77) { desc = 'Frio intenso'; icon = '❄️'; }
+        else if (code >= 80 && code <= 99) { desc = 'Tempestade'; icon = '⛈️'; }
+
+        if (descEl) descEl.textContent = desc;
+        if (iconEl) iconEl.textContent = icon;
+      }
+    } catch(e) {
+      if (descEl) descEl.textContent = 'Tempo indisponível';
+    }
+  }
+
+  fetchWeather();
+}
+
+initHomeWidgets();
+
 

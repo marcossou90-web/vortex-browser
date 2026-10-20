@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('vortexAPI', {
   closeDevTools: (data) => ipcRenderer.invoke('close-devtools', data),
   isDevToolsOpen: (data) => ipcRenderer.invoke('is-devtools-open', data),
   dockDevTools: (data) => ipcRenderer.invoke('dock-devtools', data),
+  // Captura de Tela (Screenshot)
+  capturePage: (data) => ipcRenderer.invoke('capture-page', data || {}),
+  saveScreenshotDialog: (data) => ipcRenderer.invoke('save-screenshot-dialog', data || {}),
   // Sistema de Atualização Automática (Estilo Chrome)
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),

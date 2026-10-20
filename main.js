@@ -209,6 +209,7 @@ const TRACKER_BLOCK_LIST = [
   '*://*.googlesyndication.com/*',
   '*://pagead2.googlesyndication.com/*',
   '*://adservice.google.com/*',
+  '*://*.googleoptimize.com/*',
   // Redes Sociais & Tracking Pixels
   '*://*.facebook.com/tr/*',
   '*://connect.facebook.net/*',
@@ -217,7 +218,9 @@ const TRACKER_BLOCK_LIST = [
   '*://*.analytics.twitter.com/*',
   '*://*.tiktok.com/api/v1/pixel/*',
   '*://analytics.tiktok.com/*',
-  // Principais redes de Adtech & Afiliados
+  '*://*.ads.linkedin.com/*',
+  '*://snap.licdn.com/*',
+  // Principais redes de Adtech, Afiliados e Popups
   '*://*.scorecardresearch.com/*',
   '*://*.adnxs.com/*',
   '*://*.criteo.com/*',
@@ -238,7 +241,24 @@ const TRACKER_BLOCK_LIST = [
   '*://*.propellerads.com/*',
   '*://*.exoclick.com/*',
   '*://*.trafficjunky.com/*',
-  '*://*.zergnet.com/*'
+  '*://*.zergnet.com/*',
+  '*://*.adroll.com/*',
+  '*://*.adcolony.com/*',
+  '*://*.unityads.unity3d.com/*',
+  '*://*.inmobi.com/*',
+  '*://*.vungle.com/*',
+  '*://*.ironsrc.com/*',
+  '*://*.revcontent.com/*',
+  '*://*.mgid.com/*',
+  '*://*.adsterra.com/*',
+  '*://*.yandex.ru/ads/*',
+  '*://*.an.yandex.ru/*',
+  '*://mc.yandex.ru/*',
+  // Anti-Crypto Mining malicioso embutido em sites
+  '*://*.coinhive.com/*',
+  '*://*.coin-hive.com/*',
+  '*://*.crypto-loot.com/*',
+  '*://*.cryptoloot.pro/*'
 ];
 
 let adBlockStats = { blockedCount: 0, enabled: true };
@@ -1065,6 +1085,51 @@ ipcMain.handle('is-devtools-open', async (event, { targetWebContentsId }) => {
     }
   } catch (err) {}
   return { open: false };
+});
+
+// Captura de tela da página ativa (Screenshot)
+ipcMain.handle('capture-page', async (event, { targetWebContentsId }) => {
+  try {
+    let wc = null;
+    if (targetWebContentsId) {
+      wc = webContents.fromId(targetWebContentsId);
+    }
+    if (!wc || wc.isDestroyed()) {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win && !win.isDestroyed()) {
+        const img = await win.capturePage();
+        return { success: true, dataUrl: img.toDataURL() };
+      }
+      return { success: false, error: 'WebContents não encontrado' };
+    }
+    const image = await wc.capturePage();
+    return { success: true, dataUrl: image.toDataURL() };
+  } catch (err) {
+    console.error('Erro ao capturar tela:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('save-screenshot-dialog', async (event, { dataUrl, defaultName }) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    const savePath = dialog.showSaveDialogSync(win, {
+      title: 'Salvar Captura de Tela',
+      defaultPath: path.join(app.getPath('pictures') || app.getPath('downloads'), defaultName || `Vortex_Screenshot_${Date.now()}.png`),
+      filters: [{ name: 'Imagens PNG', extensions: ['png'] }]
+    });
+
+    if (savePath) {
+      fs.writeFileSync(savePath, buffer);
+      return { success: true, path: savePath };
+    }
+    return { success: false, canceled: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 // ── Sistema de Atualizações Automáticas (Auto-Updater / GitHub Releases) ──

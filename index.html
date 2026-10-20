@@ -89,6 +89,40 @@
       <!-- Dropdown de Autocomplete / Sugestões (Omnibox igual Chrome) -->
       <div class="address-autocomplete-dropdown" id="addressAutocompleteDropdown"></div>
 
+      <!-- Botão Modo Leitura (Reader Mode) -->
+      <button class="omnibar-action-btn" id="btnReaderMode" title="Ativar/Desativar Modo Leitura">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+      </button>
+
+      <!-- Botão Picture-in-Picture (PiP) -->
+      <button class="omnibar-action-btn" id="btnPip" title="Mini-Player Flutuante (Picture-in-Picture)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+          <rect x="12" y="11" width="8" height="7" rx="1"></rect>
+        </svg>
+      </button>
+
+      <!-- Botão QR Code da Página (Compartilhar com celular) -->
+      <button class="omnibar-action-btn" id="btnQrCode" title="Criar QR Code para esta página">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </button>
+
+      <!-- Botão Captura de Tela (Screenshot) -->
+      <button class="omnibar-action-btn" id="btnScreenshot" title="Capturar tela desta página">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+      </button>
+
       <!-- Botão Estrela (Favoritar página, igual Chrome) -->
       <button class="star-btn" id="btnBookmarkStar" title="Adicionar aos favoritos (Ctrl+D)">
         <svg id="starIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -490,6 +524,21 @@
   <main class="views-container" id="viewsContainer">
     <!-- Home / Speed Dial Screen -->
     <div class="home-view" id="homeView">
+      <!-- Widgets Modernos da Nova Guia -->
+      <div class="home-widgets-container">
+        <div class="home-clock-widget">
+          <div class="home-clock-time" id="homeClockTime">12:00</div>
+          <div class="home-clock-date" id="homeClockDate">Segunda-feira, 20 de outubro</div>
+        </div>
+        <div class="home-weather-widget" id="homeWeatherWidget" title="Previsão do tempo ao vivo">
+          <span class="weather-icon" id="homeWeatherIcon">🌤️</span>
+          <div class="weather-info">
+            <span class="weather-temp" id="homeWeatherTemp">--°C</span>
+            <span class="weather-desc" id="homeWeatherDesc">Carregando clima...</span>
+          </div>
+        </div>
+      </div>
+
       <div class="home-hero">
         <h1 class="hero-title">Vortex Browser</h1>
         <p class="hero-subtitle">Navegação ultrarrápida, minimalista e com privacidade por padrão.</p>
@@ -685,6 +734,90 @@
         <button class="btn-cancel" id="btnPostponeUpdate">Lembrar Mais Tarde</button>
         <button class="btn-primary btn-update-action" id="btnActionUpdate">Baixar e Atualizar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal / Popup de QR Code para Compartilhar Página -->
+  <div class="modal-overlay" id="qrCodeModal">
+    <div class="modal-content qr-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📱 Abrir no Celular (QR Code)</h3>
+        <button class="win-btn" id="btnCloseQrModal">✕</button>
+      </div>
+      <div class="qr-modal-body">
+        <div class="qr-code-wrapper" id="qrCodeCanvasContainer">
+          <img id="qrCodeImage" alt="QR Code da Página" class="qr-image" />
+        </div>
+        <div class="qr-page-url" id="qrPageUrlText">https://...</div>
+        <div class="qr-hint-text">Aponte a câmera do seu smartphone para abrir este link instantaneamente.</div>
+      </div>
+      <div class="qr-modal-footer">
+        <button class="bk-btn" id="btnCopyQrUrl">Copiar Link</button>
+        <button class="bk-btn bk-btn-primary" id="btnCloseQrModalAction">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Captura de Tela / Screenshot Preview -->
+  <div class="modal-overlay" id="screenshotModal">
+    <div class="modal-content screenshot-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📸 Captura de Tela</h3>
+        <button class="win-btn" id="btnCloseScreenshotModal">✕</button>
+      </div>
+      <div class="screenshot-modal-body">
+        <div class="screenshot-preview-container">
+          <img id="screenshotPreviewImg" alt="Captura da Página" />
+        </div>
+      </div>
+      <div class="screenshot-modal-footer">
+        <button class="bk-btn" id="btnCopyScreenshotClipboard">Copiar Imagem</button>
+        <button class="bk-btn bk-btn-primary" id="btnSaveScreenshotFile">Salvar no Computador (.PNG)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de Comandos Rápida (Command Palette - Ctrl+K / Ctrl+Shift+P) -->
+  <div class="command-palette-overlay" id="commandPaletteOverlay">
+    <div class="command-palette-container">
+      <div class="command-palette-input-wrap">
+        <span class="cmd-icon">⚡</span>
+        <input type="text" class="command-palette-input" id="commandPaletteInput" placeholder="Digite um comando, pesquise abas ou navegue... (Esc para fechar)" autocomplete="off" />
+        <span class="cmd-badge-esc">ESC</span>
+      </div>
+      <div class="command-palette-results" id="commandPaletteResults">
+        <!-- Renderizado dinamicamente -->
+      </div>
+      <div class="command-palette-footer">
+        <span>Use <strong>↑</strong> <strong>↓</strong> para navegar</span>
+        <span><strong>Enter</strong> para executar</span>
+        <span><strong>Esc</strong> para fechar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu de Contexto da Aba (Clique com botão direito na aba) -->
+  <div class="tab-context-menu" id="tabContextMenu">
+    <div class="tab-menu-item" id="menuPinTab">
+      <span class="tab-menu-icon">📌</span>
+      <span id="menuPinTabText">Fixar Aba</span>
+    </div>
+    <div class="tab-menu-item" id="menuDuplicateTab">
+      <span class="tab-menu-icon">📄</span>
+      <span>Duplicar Aba</span>
+    </div>
+    <div class="tab-menu-item" id="menuReloadTab">
+      <span class="tab-menu-icon">🔄</span>
+      <span>Recarregar Aba</span>
+    </div>
+    <div class="tab-menu-divider"></div>
+    <div class="tab-menu-item" id="menuCloseOtherTabs">
+      <span class="tab-menu-icon">❌</span>
+      <span>Fechar Outras Abas</span>
+    </div>
+    <div class="tab-menu-item tab-menu-item-danger" id="menuCloseThisTab">
+      <span class="tab-menu-icon">🗑️</span>
+      <span>Fechar Esta Aba</span>
     </div>
   </div>
 
