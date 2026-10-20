@@ -53,6 +53,15 @@ console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${t
 const isWin = process.platform === 'win32';
 const npxCmd = isWin ? 'npx.cmd' : 'npx';
 
+// Limpa artefatos antigos de dist para evitar que o latest.yml anterior seja enviado
+const distDir = path.join(__dirname, 'dist');
+if (fs.existsSync(distDir)) {
+  try {
+    fs.rmSync(distDir, { recursive: true, force: true });
+    console.log('[Build] Pasta dist limpa para evitar conflitos de versão.');
+  } catch (e) {}
+}
+
 const buildResult = spawnSync(npxCmd, ['electron-builder', '--win', 'nsis', '--publish', 'always'], {
   stdio: 'inherit',
   env: process.env,
