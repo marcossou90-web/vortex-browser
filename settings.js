@@ -488,11 +488,26 @@ window.addEventListener('message', (event) => {
 
     if (btn) btn.disabled = false;
     if (res && res.updateAvailable) {
-      if (desc) desc.textContent = `Nova versão ${res.version} encontrada!`;
+      if (desc) desc.textContent = `Nova versão ${res.version} pronta para atualização!`;
       if (badge) {
-        badge.textContent = 'Nova Versão!';
+        badge.textContent = `v${res.version} Disponível!`;
         badge.style.background = 'rgba(34, 197, 94, 0.2)';
         badge.style.color = '#22c55e';
+      }
+      if (btn) {
+        btn.textContent = `Baixar Atualização`;
+        btn.onclick = () => {
+          btn.disabled = true;
+          if (desc) desc.textContent = 'Iniciando download da atualização...';
+          window.parent.postMessage({ type: 'trigger-download-update' }, '*');
+        };
+      }
+    } else if (res && res.success === false) {
+      if (desc) desc.textContent = `Falha ao checar: ${res.error || 'Erro de conexão'}`;
+      if (badge) {
+        badge.textContent = 'Falha';
+        badge.style.background = 'rgba(239, 68, 68, 0.2)';
+        badge.style.color = '#ef4444';
       }
     } else {
       if (desc) desc.textContent = 'O Vortex Browser está na versão mais recente.';
@@ -501,6 +516,36 @@ window.addEventListener('message', (event) => {
         badge.style.background = 'rgba(34, 197, 94, 0.2)';
         badge.style.color = '#22c55e';
       }
+      if (btn) btn.textContent = 'Verificar Atualizações';
+    }
+  } else if (event.data.type === 'update-download-progress') {
+    const pct = event.data.progress?.percent || 0;
+    const desc = document.getElementById('aboutUpdateStatusDesc');
+    const badge = document.getElementById('badgeUpdateStatus');
+    const btn = document.getElementById('btnCheckUpdateSettings');
+    if (desc) desc.textContent = `Baixando atualização... ${pct}%`;
+    if (badge) {
+      badge.textContent = `Baixando ${pct}%`;
+      badge.style.background = 'rgba(56, 189, 248, 0.2)';
+      badge.style.color = '#38bdf8';
+    }
+    if (btn) btn.disabled = true;
+  } else if (event.data.type === 'update-downloaded') {
+    const desc = document.getElementById('aboutUpdateStatusDesc');
+    const badge = document.getElementById('badgeUpdateStatus');
+    const btn = document.getElementById('btnCheckUpdateSettings');
+    if (desc) desc.textContent = 'Atualização baixada! Clique para reiniciar e aplicar a nova versão.';
+    if (badge) {
+      badge.textContent = '✓ Pronto';
+      badge.style.background = 'rgba(34, 197, 94, 0.2)';
+      badge.style.color = '#22c55e';
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Reiniciar Agora';
+      btn.onclick = () => {
+        window.parent.postMessage({ type: 'trigger-install-update' }, '*');
+      };
     }
   }
 });
@@ -528,11 +573,26 @@ document.getElementById('btnCheckUpdateSettings')?.addEventListener('click', asy
       const res = await window.vortexAPI.checkForUpdates();
       if (btn) btn.disabled = false;
       if (res && res.updateAvailable) {
-        if (desc) desc.textContent = `Nova versão ${res.version} encontrada!`;
+        if (desc) desc.textContent = `Nova versão ${res.version} pronta para atualização!`;
         if (badge) {
-          badge.textContent = 'Nova Versão!';
+          badge.textContent = `v${res.version} Disponível!`;
           badge.style.background = 'rgba(34, 197, 94, 0.2)';
           badge.style.color = '#22c55e';
+        }
+        if (btn) {
+          btn.textContent = 'Baixar Atualização';
+          btn.onclick = () => {
+            btn.disabled = true;
+            if (desc) desc.textContent = 'Iniciando download...';
+            window.vortexAPI.downloadUpdate?.();
+          };
+        }
+      } else if (res && res.success === false) {
+        if (desc) desc.textContent = `Falha ao checar: ${res.error || 'Erro de conexão'}`;
+        if (badge) {
+          badge.textContent = 'Falha';
+          badge.style.background = 'rgba(239, 68, 68, 0.2)';
+          badge.style.color = '#ef4444';
         }
       } else {
         if (desc) desc.textContent = 'O Vortex Browser está na versão mais recente.';
@@ -543,11 +603,11 @@ document.getElementById('btnCheckUpdateSettings')?.addEventListener('click', asy
         }
       }
     } else {
-      // Como roda em <webview> isolada, dispara evento para o processo pai checar
+      // Dispara evento para a janela principal checar via IPC
       window.parent.postMessage({ type: 'trigger-check-updates' }, '*');
       setTimeout(() => {
         if (btn && btn.disabled) btn.disabled = false;
-      }, 5000);
+      }, 7000);
     }
   } catch (err) {
     if (btn) btn.disabled = false;

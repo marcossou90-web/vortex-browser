@@ -23,6 +23,32 @@ try {
 } catch (e) {
   console.error('Erro ao definir userData:', e);
 }
+// ── Gerenciamento de Múltiplas Janelas / Instâncias (Estilo Google Chrome) ──
+// Ao clicar no atalho no desktop com o Vortex já aberto, abre uma NOVA JANELA independente.
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Instância secundária: encerra imediatamente e delega a abertura para a instância principal
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Alguém clicou no atalho novamente no desktop ou barra de tarefas:
+    // Cria e exibe uma nova janela do Vortex (igual ao Google Chrome)
+    const newWin = createWindow();
+    if (newWin) {
+      if (newWin.isMinimized()) newWin.restore();
+      newWin.focus();
+
+      // Caso tenha sido passado uma URL via linha de comando
+      const urlArg = commandLine.find(arg => arg && (arg.startsWith('http://') || arg.startsWith('https://')));
+      if (urlArg) {
+        newWin.webContents.once('did-finish-load', () => {
+          newWin.webContents.send('open-in-new-tab', urlArg);
+        });
+      }
+    }
+  });
+}
 
 // ── Segurança: Limpar perfil importado automaticamente do Chrome ───────────
 // Versões anteriores do Vortex podiam importar dados do Chrome sem permissão.
@@ -159,7 +185,19 @@ function saveUserProfile(profile) {
 }
 
 
-let mainWindow;
+let mainWindow = null;
+
+function broadcastToWindows(channel, data) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(channel, data);
+    }
+  }
+}
+
+function getActiveWindow() {
+  return BrowserWindow.getFocusedWindow() || mainWindow || BrowserWindow.getAllWindows()[0] || null;
+}
 
 // Lista ampliada e eficiente de bloqueio de anúncios e telemetria (AdBlocker / Privacy Shield)
 const TRACKER_BLOCK_LIST = [
@@ -222,10 +260,11 @@ function isDownloadableUrl(url) {
 }
 
 // Gerenciador nativo de Download FTP (Datasus: SIASUS, SIHD, CIHA, etc.)
-async function downloadFtpUrl(ftpUrl) {
+async function downloadFtpUrl(ftpUrl, originWin = null) {
   let client;
   let fileName = 'download';
   let localPath = '';
+  const targetWin = originWin || getActiveWindow();
   try {
     const parsed = new URL(ftpUrl);
     const host = parsed.hostname;
@@ -238,7 +277,7 @@ async function downloadFtpUrl(ftpUrl) {
     const downloadsDir = app.getPath('downloads');
     const defaultPath = path.join(downloadsDir, fileName);
 
-    const chosenPath = dialog.showSaveDialogSync(mainWindow, {
+    const chosenPath = dialog.showSaveDialogSync(targetWin, {
       title: 'Salvar Arquivo FTP Como',
       defaultPath: defaultPath,
       properties: ['showOverwriteConfirmation']
@@ -268,16 +307,16 @@ async function downloadFtpUrl(ftpUrl) {
       totalBytes = 0;
     }
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-started', {
+    if (targetWin && !targetWin.isDestroyed()) {
+      targetWin.webContents.send('download-started', {
         fileName,
         totalBytes
       });
     }
 
     client.trackProgress(info => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('download-progress', {
+      if (targetWin && !targetWin.isDestroyed()) {
+        targetWin.webContents.send('download-progress', {
           fileName,
           receivedBytes: info.bytes,
           totalBytes: totalBytes || info.bytes
@@ -287,8 +326,8 @@ async function downloadFtpUrl(ftpUrl) {
 
     await client.downloadTo(localPath, remotePath);
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-completed', {
+    if (targetWin && !targetWin.isDestroyed()) {
+      targetWin.webContents.send('download-completed', {
         fileName,
         state: 'completed',
         savePath: localPath
@@ -296,8 +335,8 @@ async function downloadFtpUrl(ftpUrl) {
     }
   } catch (err) {
     console.error('Erro no download FTP do Vortex:', err);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-completed', {
+    if (targetWin && !targetWin.isDestroyed()) {
+      targetWin.webContents.send('download-completed', {
         fileName,
         state: 'interrupted',
         savePath: ''
@@ -319,26 +358,11 @@ function downloadHttpUrl(url) {
   }
 }
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 900,
-    minHeight: 600,
-    frame: false, // Frame customizado moderno / minimalista estilo Dev
-    backgroundColor: '#0a0d14',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      webviewTag: true, // Habilita tags <webview> para isolamento de abas
-      plugins: true     // Habilita visualizador de PDF embutido (evita abrir o Edge para PDFs)
-    }
-  });
+let sessionInitialized = false;
+function initDefaultSession() {
+  if (sessionInitialized) return;
+  sessionInitialized = true;
 
-  mainWindow.loadFile('index.html');
-
-  // Configuração do Escudo de Privacidade (Privacy Shield & AdBlock)
   const defaultSession = session.defaultSession;
   
   // Bloquear o Chromium de delegar protocolos e downloads para o navegador externo (Edge)
@@ -364,12 +388,10 @@ function createWindow() {
       return;
     }
     adBlockStats.blockedCount++;
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('tracker-blocked', { 
-        url: details.url, 
-        count: adBlockStats.blockedCount 
-      });
-    }
+    broadcastToWindows('tracker-blocked', { 
+      url: details.url, 
+      count: adBlockStats.blockedCount 
+    });
     callback({ cancel: true });
   });
 
@@ -400,9 +422,10 @@ function createWindow() {
     const totalBytes = item.getTotalBytes();
     const downloadsDir = app.getPath('downloads');
     const defaultPath = path.join(downloadsDir, fileName);
+    const targetWin = BrowserWindow.fromWebContents(webContents) || getActiveWindow();
 
     // Abre diálogo para o usuário escolher a pasta de destino e nome do arquivo (igual Chrome)
-    const chosenPath = dialog.showSaveDialogSync(mainWindow, {
+    const chosenPath = dialog.showSaveDialogSync(targetWin, {
       title: 'Salvar Arquivo Como',
       defaultPath: defaultPath,
       properties: ['showOverwriteConfirmation']
@@ -417,8 +440,8 @@ function createWindow() {
     item.setSavePath(chosenPath);
     
     // Notifica início do download
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-started', {
+    if (targetWin && !targetWin.isDestroyed()) {
+      targetWin.webContents.send('download-started', {
         fileName: path.basename(chosenPath),
         totalBytes
       });
@@ -426,8 +449,8 @@ function createWindow() {
 
     item.on('updated', (event, state) => {
       if (state === 'progressing') {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('download-progress', {
+        if (targetWin && !targetWin.isDestroyed()) {
+          targetWin.webContents.send('download-progress', {
             fileName: path.basename(chosenPath),
             receivedBytes: item.getReceivedBytes(),
             totalBytes: item.getTotalBytes()
@@ -437,8 +460,8 @@ function createWindow() {
     });
 
     item.once('done', (event, state) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('download-completed', {
+      if (targetWin && !targetWin.isDestroyed()) {
+        targetWin.webContents.send('download-completed', {
           fileName: path.basename(chosenPath),
           state, // 'completed', 'cancelled', 'interrupted'
           savePath: item.getSavePath ? item.getSavePath() : chosenPath
@@ -446,29 +469,63 @@ function createWindow() {
       }
     });
   });
+}
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    minWidth: 900,
+    minHeight: 600,
+    frame: false, // Frame customizado moderno / minimalista estilo Dev
+    backgroundColor: '#0a0d14',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      webviewTag: true, // Habilita tags <webview> para isolamento de abas
+      plugins: true     // Habilita visualizador de PDF embutido (evita abrir o Edge para PDFs)
+    }
   });
+
+  mainWindow = win;
+
+  win.loadFile('index.html');
+
+  win.on('focus', () => {
+    mainWindow = win;
+  });
+
+  win.on('closed', () => {
+    if (mainWindow === win) {
+      const remaining = BrowserWindow.getAllWindows().filter(w => w !== win && !w.isDestroyed());
+      mainWindow = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+    }
+  });
+
+  return win;
 }
 
 // IPC Controls da Janela Customizada
-ipcMain.on('window-minimize', () => {
-  if (mainWindow) mainWindow.minimize();
+ipcMain.on('window-minimize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  if (win && !win.isDestroyed()) win.minimize();
 });
 
-ipcMain.on('window-maximize', () => {
-  if (mainWindow) {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
+ipcMain.on('window-maximize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  if (win && !win.isDestroyed()) {
+    if (win.isMaximized()) {
+      win.unmaximize();
     } else {
-      mainWindow.maximize();
+      win.maximize();
     }
   }
 });
 
-ipcMain.on('window-close', () => {
-  if (mainWindow) mainWindow.close();
+ipcMain.on('window-close', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  if (win && !win.isDestroyed()) win.close();
 });
 
 ipcMain.on('get-block-stats', (event) => {
@@ -476,11 +533,12 @@ ipcMain.on('get-block-stats', (event) => {
 });
 
 // Posição física e instantânea do mouse relativo à janela Vortex para o menu de contexto abrir exatamente na ponta da seta (igual ao Chrome)
-function resolveCursorPoint() {
+function resolveCursorPoint(event) {
   try {
     const point = screen.getCursorScreenPoint();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      const winBounds = mainWindow.getContentBounds ? mainWindow.getContentBounds() : mainWindow.getBounds();
+    const win = (event && event.sender && BrowserWindow.fromWebContents(event.sender)) || getActiveWindow();
+    if (win && !win.isDestroyed()) {
+      const winBounds = win.getContentBounds ? win.getContentBounds() : win.getBounds();
       return { 
         x: Math.round(point.x - winBounds.x), 
         y: Math.round(point.y - winBounds.y) 
@@ -493,11 +551,11 @@ function resolveCursorPoint() {
 }
 
 ipcMain.on('get-cursor-point', (event) => {
-  event.returnValue = resolveCursorPoint();
+  event.returnValue = resolveCursorPoint(event);
 });
 
-ipcMain.handle('get-cursor-point', async () => {
-  return resolveCursorPoint();
+ipcMain.handle('get-cursor-point', async (event) => {
+  return resolveCursorPoint(event);
 });
 
 ipcMain.on('set-adblock-enabled', (event, enabled) => {
@@ -510,7 +568,8 @@ ipcMain.handle('get-downloads-path', () => {
 
 // IPC para acionar download FTP
 ipcMain.on('download-ftp', (event, url) => {
-  if (url) downloadFtpUrl(url);
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  if (url) downloadFtpUrl(url, win);
 });
 
 // IPC para acionar download HTTP
@@ -536,8 +595,6 @@ ipcMain.on('open-path', (event, fullPath) => {
   }
 });
 
-
-
 // Limpeza de rastros ao fechar / modo privado
 ipcMain.on('clear-browsing-data', async (event) => {
   await session.defaultSession.clearStorageData({
@@ -555,8 +612,9 @@ ipcMain.on('open-new-window', () => {
 // Garante que APENAS a janela nativa do próprio Vortex possa acessar o cofre de senhas
 function isTrustedSender(event) {
   if (!event || !event.sender) return false;
-  if (!mainWindow || mainWindow.isDestroyed()) return false;
-  return event.sender.id === mainWindow.webContents.id;
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || win.isDestroyed()) return false;
+  return event.sender.id === win.webContents.id;
 }
 
 // ── IPC Handlers: Gerenciador de Senhas e Sincronização por E-mail ─────
@@ -1013,6 +1071,60 @@ ipcMain.handle('is-devtools-open', async (event, { targetWebContentsId }) => {
 // Token para download seguro de atualizações em repositório privado
 const VORTEX_UPDATE_TOKEN = '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';
 
+// Compara versões semver
+function isNewerVersion(remote, local) {
+  if (!remote || !local) return false;
+  const r = remote.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+  const l = local.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+  for (let i = 0; i < Math.max(r.length, l.length); i++) {
+    const rv = r[i] || 0;
+    const lv = l[i] || 0;
+    if (rv > lv) return true;
+    if (rv < lv) return false;
+  }
+  return false;
+}
+
+// Fallback direto via API do GitHub (caso autoUpdater falhe ou em ambiente de desenvolvimento)
+function checkGitHubReleaseDirect() {
+  return new Promise((resolve) => {
+    const https = require('https');
+    const token = process.env.GH_TOKEN || VORTEX_UPDATE_TOKEN;
+    const req = https.request({
+      hostname: 'api.github.com',
+      path: '/repos/marcossou90-web/vortex-browser/releases/latest',
+      headers: {
+        'Authorization': 'token ' + token,
+        'User-Agent': 'VortexUpdater'
+      }
+    }, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const rel = JSON.parse(data);
+            const tagVer = (rel.tag_name || rel.name || '').replace(/^v/, '');
+            const exeAsset = rel.assets?.find(a => a.name?.endsWith('.exe'));
+            resolve({
+              found: true,
+              version: tagVer,
+              releaseNotes: rel.body || '',
+              publishedAt: rel.published_at,
+              downloadUrl: exeAsset?.browser_download_url || rel.html_url
+            });
+            return;
+          }
+        } catch (e) {}
+        resolve({ found: false });
+      });
+    });
+    req.on('error', () => resolve({ found: false }));
+    req.setTimeout(8000, () => { req.destroy(); resolve({ found: false }); });
+    req.end();
+  });
+}
+
 function setupAutoUpdater() {
   if (!autoUpdater) return;
 
@@ -1039,20 +1151,6 @@ function setupAutoUpdater() {
   autoUpdater.on('update-available', (info) => {
     const currentVer = app.getVersion();
     console.log(`[AutoUpdater] Versão instalada: ${currentVer} | Versão no GitHub: ${info.version}`);
-    
-    // Compara versões para NUNCA exibir atualização se o app já estiver na versão mais recente
-    function isNewerVersion(remote, local) {
-      if (!remote || !local) return false;
-      const r = remote.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
-      const l = local.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
-      for (let i = 0; i < Math.max(r.length, l.length); i++) {
-        const rv = r[i] || 0;
-        const lv = l[i] || 0;
-        if (rv > lv) return true;
-        if (rv < lv) return false;
-      }
-      return false;
-    }
 
     if (!isNewerVersion(info.version, currentVer)) {
       console.log('[AutoUpdater] Versão remota é igual ou menor. Nenhuma notificação necessária.');
@@ -1060,13 +1158,11 @@ function setupAutoUpdater() {
     }
 
     console.log('[AutoUpdater] Nova versão disponível encontrada:', info.version);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-available', {
-        version: info.version,
-        releaseDate: info.releaseDate,
-        releaseNotes: info.releaseNotes || ''
-      });
-    }
+    broadcastToWindows('update-available', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes || ''
+    });
   });
 
   autoUpdater.on('update-not-available', (info) => {
@@ -1078,50 +1174,85 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-download-progress', {
-        percent: Math.round(progress.percent || 0),
-        bytesPerSecond: progress.bytesPerSecond,
-        transferred: progress.transferred,
-        total: progress.total
-      });
-    }
+    broadcastToWindows('update-download-progress', {
+      percent: Math.round(progress.percent || 0),
+      bytesPerSecond: progress.bytesPerSecond,
+      transferred: progress.transferred,
+      total: progress.total
+    });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[AutoUpdater] Nova versão baixada e pronta para instalar:', info.version);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-downloaded', {
-        version: info.version
-      });
-    }
+    broadcastToWindows('update-downloaded', {
+      version: info.version
+    });
   });
 }
 
 ipcMain.handle('check-for-updates', async () => {
-  if (!autoUpdater) return { success: false, error: 'Módulo de atualização não disponível' };
-  try {
-    const result = await autoUpdater.checkForUpdates();
+  const currentVersion = app.getVersion();
+  let updaterResult = null;
+  let updaterError = null;
+
+  if (autoUpdater && app.isPackaged) {
+    try {
+      updaterResult = await autoUpdater.checkForUpdates();
+    } catch (err) {
+      updaterError = err.message;
+      console.warn('[AutoUpdater] autoUpdater falhou, tentando fallback GitHub:', err.message);
+    }
+  }
+
+  if (updaterResult && updaterResult.updateInfo) {
+    const isNewer = isNewerVersion(updaterResult.updateInfo.version, currentVersion);
     return {
       success: true,
-      updateAvailable: !!(result && result.updateInfo && result.updateInfo.version !== app.getVersion()),
-      version: result?.updateInfo?.version || null,
-      currentVersion: app.getVersion()
+      updateAvailable: isNewer,
+      version: updaterResult.updateInfo.version,
+      currentVersion,
+      releaseNotes: updaterResult.updateInfo.releaseNotes || ''
     };
-  } catch (err) {
-    console.warn('[AutoUpdater] Verificação manual falhou:', err.message);
-    return { success: false, error: err.message, currentVersion: app.getVersion() };
   }
+
+  // Fallback via API do GitHub
+  const direct = await checkGitHubReleaseDirect();
+  if (direct && direct.found) {
+    const isNewer = isNewerVersion(direct.version, currentVersion);
+    return {
+      success: true,
+      updateAvailable: isNewer,
+      version: direct.version,
+      currentVersion,
+      releaseNotes: direct.releaseNotes,
+      downloadUrl: direct.downloadUrl
+    };
+  }
+
+  if (updaterError) {
+    return { success: false, error: updaterError, currentVersion };
+  }
+
+  return { success: true, updateAvailable: false, currentVersion };
 });
 
 ipcMain.handle('download-update', async () => {
-  if (!autoUpdater) return { success: false, error: 'Módulo de atualização não disponível' };
-  try {
-    await autoUpdater.downloadUpdate();
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
+  if (autoUpdater && app.isPackaged) {
+    try {
+      await autoUpdater.downloadUpdate();
+      return { success: true };
+    } catch (err) {
+      console.warn('[AutoUpdater] Download via autoUpdater falhou:', err.message);
+    }
   }
+
+  const direct = await checkGitHubReleaseDirect();
+  if (direct && direct.downloadUrl) {
+    shell.openExternal(direct.downloadUrl);
+    return { success: true, external: true };
+  }
+
+  return { success: false, error: 'Não foi possível iniciar o download da atualização.' };
 });
 
 ipcMain.handle('install-update', () => {
@@ -1136,6 +1267,8 @@ ipcMain.handle('install-update', () => {
 });
 
 app.whenReady().then(() => {
+  if (!gotTheLock) return;
+  initDefaultSession();
   createWindow();
   setupAutoUpdater();
 
@@ -1172,16 +1305,17 @@ app.whenReady().then(() => {
       if (url.startsWith('devtools://') || url.startsWith('chrome-devtools://')) {
         return { action: 'allow' };
       }
+      const targetWin = BrowserWindow.fromWebContents(contents) || getActiveWindow();
       if (url.startsWith('ftp://')) {
-        downloadFtpUrl(url);
+        downloadFtpUrl(url, targetWin);
         return { action: 'deny' };
       }
       if (isDownloadableUrl(url)) {
         downloadHttpUrl(url);
         return { action: 'deny' };
       }
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('open-in-new-tab', url);
+      if (targetWin && !targetWin.isDestroyed()) {
+        targetWin.webContents.send('open-in-new-tab', url);
       }
       return { action: 'deny' };
     });

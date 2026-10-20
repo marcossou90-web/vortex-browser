@@ -2513,6 +2513,12 @@ window.addEventListener('message', (e) => {
       });
     }
   }
+  if (data.type === 'trigger-download-update') {
+    if (window.vortexAPI?.downloadUpdate) window.vortexAPI.downloadUpdate();
+  }
+  if (data.type === 'trigger-install-update') {
+    if (window.vortexAPI?.installUpdate) window.vortexAPI.installUpdate();
+  }
   if (data.type === 'open-download-file' && data.path) {
     if (window.vortexAPI?.openPath) window.vortexAPI.openPath(data.path);
   }
@@ -3645,10 +3651,20 @@ if (window.vortexAPI?.getUserProfile) {
   });
 
   // Listeners do Main Process
+  function forwardToSettingsTab(msg) {
+    try {
+      const settingsTab = tabs.find(t => t.url && t.url.includes('settings.html'));
+      if (settingsTab && settingsTab.webview && settingsTab.webview.contentWindow) {
+        settingsTab.webview.contentWindow.postMessage(msg, '*');
+      }
+    } catch(e) {}
+  }
+
   if (window.vortexAPI?.onUpdateAvailable) {
     window.vortexAPI.onUpdateAvailable((info) => {
       showUpdateNotification(info);
       showToastNotification('🚀', 'Atualização Disponível', `Vortex ${info.version} está disponível para download.`);
+      forwardToSettingsTab({ type: 'update-available', info });
     });
   }
 
@@ -3661,6 +3677,7 @@ if (window.vortexAPI?.getUserProfile) {
       }
       if (updateProgressBarFill) updateProgressBarFill.style.width = `${progress.percent}%`;
       if (updateProgressLabel) updateProgressLabel.textContent = `Baixando atualização... ${progress.percent}%`;
+      forwardToSettingsTab({ type: 'update-download-progress', progress });
     });
   }
 
@@ -3679,6 +3696,7 @@ if (window.vortexAPI?.getUserProfile) {
         btnActionUpdate.disabled = false;
       }
       showToastNotification('✓', 'Atualização Pronta', 'Clique em Reiniciar para aplicar a nova versão.');
+      forwardToSettingsTab({ type: 'update-downloaded', info });
     });
   }
 })();
