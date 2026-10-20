@@ -68,6 +68,10 @@ spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
 spawnSync('git', ['commit', '-m', `chore: release ${tag}`, '--allow-empty'], { stdio: 'inherit' });
 spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
 
+// Criar e enviar a tag explicitamente para o GitHub
+spawnSync('git', ['tag', '-a', tag, '-m', `Release ${tag}`, '-f'], { stdio: 'inherit' });
+spawnSync('git', ['push', 'origin', tag, '--force'], { stdio: 'inherit' });
+
 // 4. Compila e publica via electron-builder (ele próprio cria a release no GitHub com todos os assets)
 console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
 const isWin = process.platform === 'win32';
