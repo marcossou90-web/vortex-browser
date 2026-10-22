@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('vortexAPI', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
+  isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+  onWindowStateChange: (callback) => ipcRenderer.on('window-maximized-change', (event, isMaximized) => callback(isMaximized)),
   openNewWindow: () => ipcRenderer.send('open-new-window'),
   openPrivateTab: (url) => ipcRenderer.send('open-private-tab', url || null),
   getBlockStats: () => ipcRenderer.sendSync('get-block-stats'),

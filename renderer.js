@@ -121,9 +121,40 @@ function loadSavedSettings() {
 loadSavedSettings();
 
 // ── Controles da janela ───────────────────
+const btnMaximizeEl = document.getElementById('btnMaximize');
+function setMaximizeState(isMaximized) {
+  if (!btnMaximizeEl) return;
+  if (isMaximized) {
+    btnMaximizeEl.textContent = '🗗';
+    btnMaximizeEl.title = 'Restaurar';
+  } else {
+    btnMaximizeEl.textContent = '🗖';
+    btnMaximizeEl.title = 'Maximizar';
+  }
+}
+
 document.getElementById('btnMinimize').addEventListener('click', () => window.vortexAPI.minimize());
-document.getElementById('btnMaximize').addEventListener('click', () => window.vortexAPI.maximize());
+btnMaximizeEl.addEventListener('click', () => window.vortexAPI.maximize());
 document.getElementById('btnClose').addEventListener('click', () => window.vortexAPI.close());
+
+if (window.vortexAPI.onWindowStateChange) {
+  window.vortexAPI.onWindowStateChange((isMaximized) => {
+    setMaximizeState(isMaximized);
+  });
+}
+if (window.vortexAPI.isMaximized) {
+  window.vortexAPI.isMaximized().then(setMaximizeState).catch(() => {});
+}
+
+// Duplo clique na barra superior para alternar entre maximizado e restaurado (idêntico ao Google Chrome)
+const titlebarEl = document.querySelector('.titlebar');
+if (titlebarEl) {
+  titlebarEl.addEventListener('dblclick', (e) => {
+    if (!e.target.closest('button') && !e.target.closest('.tab') && !e.target.closest('.window-controls')) {
+      window.vortexAPI.maximize();
+    }
+  });
+}
 
 // ── Modal de Privacidade ──────────────────
 const privacyModal = document.getElementById('privacyModal');

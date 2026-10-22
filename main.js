@@ -568,13 +568,108 @@ function initDefaultSession() {
   });
 }
 
+// ── Gerenciador de Estado da Janela (Estilo Google Chrome) ──────────────────
+const windowStateFile = path.join(vortexDataDir, 'window-state.json');
+
+function loadWindowState() {
+  let primaryWorkArea = { x: 0, y: 0, width: 1280, height: 820 };
+  try {
+    const primary = screen.getPrimaryDisplay();
+    if (primary && primary.workArea) {
+      primaryWorkArea = primary.workArea;
+    }
+  } catch (e) {}
+
+  // Padrão Google Chrome: primeira inicialização abre MAXIMIZADO preenchendo toda a tela
+  const state = {
+    x: undefined,
+    y: undefined,
+    width: Math.min(1366, primaryWorkArea.width || 1280),
+    height: Math.min(860, primaryWorkArea.height || 820),
+    isMaximized: true
+  };
+
+  try {
+    if (fs.existsSync(windowStateFile)) {
+      const saved = JSON.parse(fs.readFileSync(windowStateFile, 'utf8'));
+      if (typeof saved.isMaximized === 'boolean') {
+        state.isMaximized = saved.isMaximized;
+      }
+      if (Number.isInteger(saved.width) && saved.width >= 600) {
+        state.width = saved.width;
+      }
+      if (Number.isInteger(saved.height) && saved.height >= 400) {
+        state.height = saved.height;
+      }
+      if (Number.isInteger(saved.x) && Number.isInteger(saved.y)) {
+        // Valida se as coordenadas salvas ainda estão visíveis em algum monitor atualmente conectado
+        try {
+          const displays = screen.getAllDisplays();
+          const isVisible = displays.some(d => {
+            const b = d.bounds;
+            return (
+              saved.x >= b.x - 20 &&
+              saved.x < b.x + b.width - 50 &&
+              saved.y >= b.y - 20 &&
+              saved.y < b.y + b.height - 50
+            );
+          });
+          if (isVisible) {
+            state.x = saved.x;
+            state.y = saved.y;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.warn('[WindowState] Falha ao ler estado salvo:', err.message);
+  }
+
+  return state;
+}
+
+let saveWindowStateTimer = null;
+function saveWindowState(win) {
+  if (!win || win.isDestroyed()) return;
+  try {
+    const isMax = win.isMaximized();
+    let bounds = {};
+    if (!isMax && !win.isMinimized() && !win.isFullScreen()) {
+      bounds = win.getNormalBounds ? win.getNormalBounds() : win.getBounds();
+    } else if (win.getNormalBounds) {
+      bounds = win.getNormalBounds();
+    }
+
+    const state = {
+      isMaximized: isMax,
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
+    };
+    fs.writeFileSync(windowStateFile, JSON.stringify(state, null, 2), 'utf8');
+  } catch (e) {}
+}
+
+function debouncedSaveWindowState(win) {
+  if (saveWindowStateTimer) clearTimeout(saveWindowStateTimer);
+  saveWindowStateTimer = setTimeout(() => {
+    saveWindowState(win);
+  }, 400);
+}
+
 function createWindow() {
   const appIconPath = path.join(__dirname, 'assets', 'icon.png');
+  const winState = loadWindowState();
+
   const win = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    x: winState.x,
+    y: winState.y,
+    width: winState.width,
+    height: winState.height,
     minWidth: 900,
     minHeight: 600,
+    show: false, // Inicia invisível para aplicar o estado maximizado suavemente sem "pulo" visual
     icon: fs.existsSync(appIconPath) ? appIconPath : undefined,
     frame: false, // Frame customizado moderno / minimalista estilo Dev
     backgroundColor: '#0a0d14',
@@ -589,7 +684,53 @@ function createWindow() {
 
   mainWindow = win;
 
+  // Se o usuário fechou maximizado (ou é o primeiro acesso), abre maximizado
+  if (winState.isMaximized) {
+    win.maximize();
+  }
+
+  win.once('ready-to-show', () => {
+    if (winState.isMaximized && !win.isMaximized()) {
+      win.maximize();
+    }
+    win.show();
+    try {
+      win.webContents.send('window-maximized-change', win.isMaximized());
+    } catch (e) {}
+  });
+
   win.loadFile('index.html');
+
+  // Monitora redimensionamento e movimento para persistir como no Google Chrome
+  win.on('resize', () => {
+    if (!win.isMaximized() && !win.isMinimized()) {
+      debouncedSaveWindowState(win);
+    }
+  });
+
+  win.on('move', () => {
+    if (!win.isMaximized() && !win.isMinimized()) {
+      debouncedSaveWindowState(win);
+    }
+  });
+
+  win.on('maximize', () => {
+    debouncedSaveWindowState(win);
+    try {
+      win.webContents.send('window-maximized-change', true);
+    } catch (e) {}
+  });
+
+  win.on('unmaximize', () => {
+    debouncedSaveWindowState(win);
+    try {
+      win.webContents.send('window-maximized-change', false);
+    } catch (e) {}
+  });
+
+  win.on('close', () => {
+    saveWindowState(win);
+  });
 
   win.on('focus', () => {
     mainWindow = win;
@@ -606,6 +747,11 @@ function createWindow() {
 }
 
 // IPC Controls da Janela Customizada
+ipcMain.handle('window-is-maximized', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
+  return win && !win.isDestroyed() ? win.isMaximized() : false;
+});
+
 ipcMain.on('window-minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
   if (win && !win.isDestroyed()) win.minimize();
@@ -619,12 +765,16 @@ ipcMain.on('window-maximize', (event) => {
     } else {
       win.maximize();
     }
+    debouncedSaveWindowState(win);
   }
 });
 
 ipcMain.on('window-close', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender) || getActiveWindow();
-  if (win && !win.isDestroyed()) win.close();
+  if (win && !win.isDestroyed()) {
+    saveWindowState(win);
+    win.close();
+  }
 });
 
 ipcMain.on('get-block-stats', (event) => {

@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 
 console.log('========================================================');
@@ -77,11 +79,12 @@ try {
     githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
       `Vortex Browser ${tag} Oficial`,
+      'Abertura inteligente maximizada preenchendo a tela por padrão igual ao Google Chrome',
+      'Restauração de posição e tamanho anterior da janela com suporte a duplo clique no topo',
       'Nova interface moderna com abas curvas cibernéticas e Omnibar com efeito glow neon',
       'Novo gerenciador de Cookies & Consentimento com controle de privacidade e limpeza ao fechar',
       'Assistente inteligente de aceitação de banners de cookies (LGPD / GDPR)',
-      'Vortex Privacy Shield atualizado com proteção ultrarrápida contra anúncios e rastreadores',
-      'Sistema de atualização automática em segundo plano idêntico ao Google Chrome'
+      'Vortex Privacy Shield atualizado com proteção ultrarrápida contra anúncios e rastreadores'
     ]
   };
   fs.writeFileSync(docsVerPath, JSON.stringify(versionInfo, null, 2) + '\n', 'utf8');
@@ -90,11 +93,13 @@ try {
   console.warn('[Site Vortex] Aviso: Não foi possível atualizar docs/version.json:', e.message);
 }
 
-// 3. Git commit e sincronização
+// 3. Git commit, tag e sincronização
 console.log('\n[2/4] Registrando no Git e sincronizando com GitHub...');
 spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
 spawnSync('git', ['commit', '-m', `chore: release ${tag}`, '--allow-empty'], { stdio: 'inherit' });
 spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
+spawnSync('git', ['tag', '-a', tag, '-m', `Release ${tag}`], { stdio: 'inherit' });
+spawnSync('git', ['push', 'origin', tag], { stdio: 'inherit' });
 
 // 4. Compila e publica via electron-builder (ele próprio cria a release no GitHub com todos os assets)
 console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
@@ -121,8 +126,30 @@ if (buildResult.status !== 0) {
   process.exit(buildResult.status || 1);
 }
 
+// Garante que latest.yml e hash sha512 estejam prontos para o autoUpdater
+const ymlPath = path.join(__dirname, 'dist', 'latest.yml');
+try {
+  const exeFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.exe') && !f.includes('uninstaller'));
+  if (exeFiles.length > 0) {
+    const exeName = exeFiles[0];
+    const exeFullPath = path.join(distDir, exeName);
+    const buf = fs.readFileSync(exeFullPath);
+    const sha512 = crypto.createHash('sha512').update(buf).digest('base64');
+    const autoYml = [
+      `version: ${newVer}`,
+      'files:',
+      `  - url: ${exeName.replace(/\s+/g, '-')}`,
+      `    sha512: ${sha512}`,
+      `    size: ${buf.length}`,
+      `path: ${exeName.replace(/\s+/g, '-')}`,
+      `sha512: ${sha512}`,
+      `releaseDate: '${new Date().toISOString()}'`
+    ].join('\n') + '\n';
+    fs.writeFileSync(ymlPath, autoYml, 'utf8');
+  }
+} catch (e) {}
+
 // 5. Garantir que a release seja marcada como publicada (draft: false) via GitHub API
-const https = require('https');
 const token = process.env.GH_TOKEN;
 if (token) {
   const getReq = https.request({
@@ -132,7 +159,7 @@ if (token) {
   }, res => {
     let data = '';
     res.on('data', d => data += d);
-    res.on('end', () => {
+    res.on('end', async () => {
       try {
         const list = JSON.parse(data);
         const rel = Array.isArray(list) ? list.find(r => r.tag_name === tag) : null;
@@ -140,7 +167,7 @@ if (token) {
           const patchBody = JSON.stringify({
             draft: false,
             name: `Vortex Browser ${tag}`,
-            body: `## Novidades na versão ${tag}\n\n- ✨ **Nova Interface Cyber**: Abas modernas curvas com indicador neon dinâmico e barra de endereços Omnibar redesenhada.\n- 🍪 **Gerenciador de Cookies & Consentimento**: Controle granular de cookies, limpeza automática ao sair e assistente de aceitação de banners.\n- 🛡️ **Vortex Privacy Shield**: Proteção reforçada contra rastreadores e popups intrusivos.\n- ⚡ **Auto-Update Integrado**: Atualização silenciosa em segundo plano idêntica ao Google Chrome.`
+            body: `## 🚀 Novidades na versão ${tag}\n\n- 🖥️ **Abertura Inteligente em Tela Cheia (Estilo Google Chrome)**: O navegador agora salva e restaura automaticamente suas dimensões e posição da janela, abrindo sempre maximizado ou preenchendo sua tela.\n- 🗖 **Duplo Clique para Maximizar**: Dê duplo clique na barra de abas para alternar facilmente entre maximizado e tamanho normal.\n- ✨ **Nova Interface Cyber**: Abas modernas curvas com indicador neon dinâmico e barra de endereços Omnibar redesenhada.\n- 🍪 **Gerenciador de Cookies & Consentimento**: Controle granular de cookies, limpeza automática ao sair e assistente de aceitação de banners.\n- 🛡️ **Vortex Privacy Shield**: Proteção reforçada contra rastreadores e popups intrusivos.\n- ⚡ **Auto-Update Integrado**: Atualização silenciosa em segundo plano idêntica ao Google Chrome.`
           });
           const patchReq = https.request({
             method: 'PATCH',
@@ -157,6 +184,39 @@ if (token) {
           });
           patchReq.write(patchBody);
           patchReq.end();
+
+          // Upload de latest.yml e blockmap caso faltem nos assets da release
+          const uploadAsset = (name, cType, data) => new Promise(resolve => {
+            const upReq = https.request({
+              method: 'POST',
+              hostname: 'uploads.github.com',
+              path: `/repos/vortexbrowser/vortex-browser/releases/${rel.id}/assets?name=${encodeURIComponent(name)}`,
+              headers: {
+                'Authorization': 'token ' + token,
+                'User-Agent': 'VortexUploader',
+                'Content-Type': cType,
+                'Content-Length': data.length
+              }
+            }, r => resolve(r.statusCode));
+            upReq.on('error', () => resolve(null));
+            upReq.write(data);
+            upReq.end();
+          });
+
+          try {
+            const hasYml = rel.assets && rel.assets.some(a => a.name === 'latest.yml');
+            if (!hasYml && fs.existsSync(ymlPath)) {
+              await uploadAsset('latest.yml', 'text/yaml', fs.readFileSync(ymlPath));
+            }
+            const blockmapFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.blockmap'));
+            for (const bm of blockmapFiles) {
+              const targetName = bm.replace(/\s+/g, '-');
+              const hasBm = rel.assets && rel.assets.some(a => a.name === targetName);
+              if (!hasBm) {
+                await uploadAsset(targetName, 'application/octet-stream', fs.readFileSync(path.join(distDir, bm)));
+              }
+            }
+          } catch(e) {}
         }
       } catch(e) {}
     });
@@ -165,7 +225,6 @@ if (token) {
 }
 
 // Sincroniza tamanho real e artefato gerado em docs/version.json
-const ymlPath = path.join(__dirname, 'dist', 'latest.yml');
 if (fs.existsSync(ymlPath) && fs.existsSync(docsVerPath)) {
   try {
     const ymlContent = fs.readFileSync(ymlPath, 'utf8');
