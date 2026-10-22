@@ -274,6 +274,13 @@ function initDownloadModal() {
     });
   }
 
+  const understoodBtn = document.getElementById('modalUnderstoodBtn');
+  if (understoodBtn) {
+    understoodBtn.addEventListener('click', () => {
+      modalBackdrop.classList.remove('open');
+    });
+  }
+
   modalBackdrop.addEventListener('click', (e) => {
     if (e.target === modalBackdrop) {
       modalBackdrop.classList.remove('open');

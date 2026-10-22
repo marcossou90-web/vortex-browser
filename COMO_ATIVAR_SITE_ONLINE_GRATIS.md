@@ -34,6 +34,7 @@ Como os arquivos foram colocados na pasta [`docs/`](./docs) do seu repositório 
 Você não precisa mexer em código nenhum quando lançar uma versão nova!
 
 Sempre que você quiser liberar uma nova versão para os usuários:
+
 1. Dê dois cliques no arquivo **[`publicar-atualizacao.bat`](./publicar-atualizacao.bat)** (ou execute `npm run release` no terminal).
 2. O script automaticamente:
    - Sobe a versão (ex: `1.2.1` -> `1.2.2`);
@@ -45,7 +46,8 @@ Sempre que você quiser liberar uma nova versão para os usuários:
 
 ---
 
-## 🎨 Recursos Incluídos no Site:
+## 🎨 Recursos Incluídos no Site
+
 
 - **Estética Google Chrome**:
   - Banner superior com anúncio das novidades de IA;
