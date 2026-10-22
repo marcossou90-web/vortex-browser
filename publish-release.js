@@ -27,6 +27,7 @@ if (!process.env.GH_TOKEN) {
   console.error('[ERRO] GH_TOKEN não encontrado no arquivo .env!');
   process.exit(1);
 }
+process.env.GITHUB_TOKEN = process.env.GH_TOKEN;
 
 // 2. Incrementa a versão no package.json (suporta minor/major quando for grande atualização)
 const arg = process.argv[2];
@@ -75,9 +76,12 @@ try {
     downloadUrl: `https://github.com/vortexbrowser/vortex-browser/releases/download/${tag}/Vortex.Browser.Setup.${newVer}.exe`,
     githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
-      `Versão oficial ${tag}`,
-      'Melhorias de estabilidade, segurança e performance',
-      'Vortex Privacy Shield e motor Chromium otimizados'
+      `Vortex Browser ${tag} Oficial`,
+      'Nova interface moderna com abas curvas cibernéticas e Omnibar com efeito glow neon',
+      'Novo gerenciador de Cookies & Consentimento com controle de privacidade e limpeza ao fechar',
+      'Assistente inteligente de aceitação de banners de cookies (LGPD / GDPR)',
+      'Vortex Privacy Shield atualizado com proteção ultrarrápida contra anúncios e rastreadores',
+      'Sistema de atualização automática em segundo plano idêntico ao Google Chrome'
     ]
   };
   fs.writeFileSync(docsVerPath, JSON.stringify(versionInfo, null, 2) + '\n', 'utf8');
@@ -95,7 +99,7 @@ spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
 // 4. Compila e publica via electron-builder (ele próprio cria a release no GitHub com todos os assets)
 console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
 const isWin = process.platform === 'win32';
-const npxCmd = isWin ? 'npx.cmd' : 'npx';
+const npmCmd = isWin ? 'npm.cmd' : 'npm';
 
 // Limpa artefatos antigos de dist para evitar que o latest.yml anterior seja enviado
 const distDir = path.join(__dirname, 'dist');
@@ -106,7 +110,7 @@ if (fs.existsSync(distDir)) {
   } catch (e) {}
 }
 
-const buildResult = spawnSync(npxCmd, ['electron-builder', '--win', 'nsis', '--publish', 'always'], {
+const buildResult = spawnSync(npmCmd, ['run', 'dist', '--', '--publish', 'always'], {
   stdio: 'inherit',
   env: process.env,
   shell: true
@@ -131,9 +135,13 @@ if (token) {
     res.on('end', () => {
       try {
         const list = JSON.parse(data);
-        const rel = list.find(r => r.tag_name === tag);
-        if (rel && rel.draft) {
-          const patchBody = JSON.stringify({ draft: false });
+        const rel = Array.isArray(list) ? list.find(r => r.tag_name === tag) : null;
+        if (rel) {
+          const patchBody = JSON.stringify({
+            draft: false,
+            name: `Vortex Browser ${tag}`,
+            body: `## Novidades na versão ${tag}\n\n- ✨ **Nova Interface Cyber**: Abas modernas curvas com indicador neon dinâmico e barra de endereços Omnibar redesenhada.\n- 🍪 **Gerenciador de Cookies & Consentimento**: Controle granular de cookies, limpeza automática ao sair e assistente de aceitação de banners.\n- 🛡️ **Vortex Privacy Shield**: Proteção reforçada contra rastreadores e popups intrusivos.\n- ⚡ **Auto-Update Integrado**: Atualização silenciosa em segundo plano idêntica ao Google Chrome.`
+          });
           const patchReq = https.request({
             method: 'PATCH',
             hostname: 'api.github.com',

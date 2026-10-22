@@ -1,17 +1,18 @@
 {
-  "version": "1.2.1",
-  "tag": "v1.2.1",
-  "name": "Vortex Browser v1.2.1",
-  "releaseDate": "2026-10-20T14:23:00.564Z",
-  "fileName": "Vortex Browser Setup 1.2.1.exe",
+  "version": "1.3.0",
+  "tag": "v1.3.0",
+  "name": "Vortex Browser v1.3.0",
+  "releaseDate": "2026-10-22T19:30:56.741Z",
+  "fileName": "Vortex Browser Setup 1.3.0.exe",
   "fileSize": "80.5 MB",
-  "downloadUrl": "https://github.com/vortexbrowser/vortex-browser/releases/download/v1.2.1/Vortex.Browser.Setup.1.2.1.exe",
-  "githubReleaseUrl": "https://github.com/vortexbrowser/vortex-browser/releases/latest",
+  "downloadUrl": "https://github.com/vortexbrowser/vortex-browser/releases/download/v1.3.0/Vortex.Browser.Setup.1.3.0.exe",
+  "githubReleaseUrl": "https://github.com/vortexbrowser/vortex-browser/releases/tag/v1.3.0",
   "changelog": [
-    "Motor otimizado com menor consumo de memória RAM",
-    "Vortex Privacy Shield atualizado para bloquear mais de 98% dos anúncios e rastreadores",
-    "Omnibar com pesquisa inteligente e indicador de segurança SSL aprimorado",
-    "Modo Leitura e Picture-in-Picture integrados",
-    "Sistema de atualização automática em segundo plano idêntico ao Chrome"
+    "Vortex Browser v1.3.0 Oficial",
+    "Nova interface moderna com abas curvas cibernéticas e Omnibar com efeito glow neon",
+    "Novo gerenciador de Cookies & Consentimento com controle de privacidade e limpeza ao fechar",
+    "Assistente inteligente de aceitação de banners de cookies (LGPD / GDPR)",
+    "Vortex Privacy Shield atualizado com proteção ultrarrápida contra anúncios e rastreadores",
+    "Sistema de atualização automática em segundo plano idêntico ao Google Chrome"
   ]
 }

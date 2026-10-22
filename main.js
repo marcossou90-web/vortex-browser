@@ -1320,9 +1320,6 @@ ipcMain.handle('save-screenshot-dialog', async (event, { dataUrl, defaultName })
 });
 
 // ── Sistema de Atualizações Automáticas (Auto-Updater / GitHub Releases) ──
-// Token para download seguro de atualizações em repositório privado
-const VORTEX_UPDATE_TOKEN = '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';
-
 // Compara versões semver
 function isNewerVersion(remote, local) {
   if (!remote || !local) return false;
@@ -1337,18 +1334,20 @@ function isNewerVersion(remote, local) {
   return false;
 }
 
-// Fallback direto via API do GitHub (caso autoUpdater falhe ou em ambiente de desenvolvimento)
+// Fallback direto via API pública do GitHub (caso autoUpdater falhe ou em ambiente de desenvolvimento)
 function checkGitHubReleaseDirect() {
   return new Promise((resolve) => {
     const https = require('https');
-    const token = process.env.GH_TOKEN || VORTEX_UPDATE_TOKEN;
+    const headers = {
+      'User-Agent': 'VortexBrowser-AutoUpdater'
+    };
+    if (process.env.GH_TOKEN) {
+      headers['Authorization'] = 'token ' + process.env.GH_TOKEN;
+    }
     const req = https.request({
       hostname: 'api.github.com',
       path: '/repos/vortexbrowser/vortex-browser/releases/latest',
-      headers: {
-        'Authorization': 'token ' + token,
-        'User-Agent': 'VortexUpdater'
-      }
+      headers
     }, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -1381,13 +1380,13 @@ function setupAutoUpdater() {
   if (!autoUpdater) return;
 
   try {
-    autoUpdater.setFeedURL({
+    const feedConfig = {
       provider: 'github',
       owner: 'vortexbrowser',
       repo: 'vortex-browser',
-      private: true,
-      token: process.env.GH_TOKEN || VORTEX_UPDATE_TOKEN
-    });
+      releaseType: 'release'
+    };
+    autoUpdater.setFeedURL(feedConfig);
   } catch (err) {
     console.warn('[AutoUpdater] Erro ao configurar FeedURL:', err.message);
   }
