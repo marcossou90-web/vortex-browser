@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/marcossou90-web/vortex-browser.git"
+    "url": "https://github.com/vortexbrowser/vortex-browser.git"
   },
   "build": {
     "appId": "com.vortex.browser",
@@ -36,7 +36,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "marcossou90-web",
+        "owner": "vortexbrowser",
         "repo": "vortex-browser",
         "private": true,
         "releaseType": "release"

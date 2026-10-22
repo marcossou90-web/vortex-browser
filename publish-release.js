@@ -72,8 +72,8 @@ try {
     releaseDate: new Date().toISOString(),
     fileName: `Vortex Browser Setup ${newVer}.exe`,
     fileSize: '80.5 MB',
-    downloadUrl: `https://github.com/marcossou90-web/vortex-browser/releases/download/${tag}/Vortex.Browser.Setup.${newVer}.exe`,
-    githubReleaseUrl: `https://github.com/marcossou90-web/vortex-browser/releases/tag/${tag}`,
+    downloadUrl: `https://github.com/vortexbrowser/vortex-browser/releases/download/${tag}/Vortex.Browser.Setup.${newVer}.exe`,
+    githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
       `Versão oficial ${tag}`,
       'Melhorias de estabilidade, segurança e performance',
@@ -123,7 +123,7 @@ const token = process.env.GH_TOKEN;
 if (token) {
   const getReq = https.request({
     hostname: 'api.github.com',
-    path: '/repos/marcossou90-web/vortex-browser/releases',
+    path: '/repos/vortexbrowser/vortex-browser/releases',
     headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
   }, res => {
     let data = '';
@@ -137,7 +137,7 @@ if (token) {
           const patchReq = https.request({
             method: 'PATCH',
             hostname: 'api.github.com',
-            path: `/repos/marcossou90-web/vortex-browser/releases/${rel.id}`,
+            path: `/repos/vortexbrowser/vortex-browser/releases/${rel.id}`,
             headers: {
               'Authorization': 'token ' + token,
               'User-Agent': 'VortexUpdater',

@@ -1167,7 +1167,7 @@ function checkGitHubReleaseDirect() {
     const token = process.env.GH_TOKEN || VORTEX_UPDATE_TOKEN;
     const req = https.request({
       hostname: 'api.github.com',
-      path: '/repos/marcossou90-web/vortex-browser/releases/latest',
+      path: '/repos/vortexbrowser/vortex-browser/releases/latest',
       headers: {
         'Authorization': 'token ' + token,
         'User-Agent': 'VortexUpdater'
@@ -1206,7 +1206,7 @@ function setupAutoUpdater() {
   try {
     autoUpdater.setFeedURL({
       provider: 'github',
-      owner: 'marcossou90-web',
+      owner: 'vortexbrowser',
       repo: 'vortex-browser',
       private: true,
       token: process.env.GH_TOKEN || VORTEX_UPDATE_TOKEN

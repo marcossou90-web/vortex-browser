@@ -5,13 +5,13 @@
 
 // Configuration
 const CONFIG = {
-  repoOwner: 'marcossou90-web',
+  repoOwner: 'vortexbrowser',
   repoName: 'vortex-browser',
   fallbackVersion: '1.2.1',
   fallbackTag: 'v1.2.1',
   fallbackSize: '80.5 MB',
   fallbackExeName: 'Vortex Browser Setup 1.2.1.exe',
-  fallbackUrl: 'https://github.com/marcossou90-web/vortex-browser/releases/latest'
+  fallbackUrl: 'https://github.com/vortexbrowser/vortex-browser/releases/latest'
 };
 
 // Current resolved release data
