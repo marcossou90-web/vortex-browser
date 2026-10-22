@@ -62,6 +62,30 @@ console.log(`Versão: ${oldVer} -> ${newVer}`);
 
 const tag = `v${newVer}`;
 
+// Atualiza o arquivo version.json do site na pasta docs para o site sincronizar instantaneamente
+const docsVerPath = path.join(__dirname, 'docs', 'version.json');
+try {
+  const versionInfo = {
+    version: newVer,
+    tag: tag,
+    name: `Vortex Browser ${tag}`,
+    releaseDate: new Date().toISOString(),
+    fileName: `Vortex Browser Setup ${newVer}.exe`,
+    fileSize: '80.5 MB',
+    downloadUrl: `https://github.com/marcossou90-web/vortex-browser/releases/download/${tag}/Vortex.Browser.Setup.${newVer}.exe`,
+    githubReleaseUrl: `https://github.com/marcossou90-web/vortex-browser/releases/tag/${tag}`,
+    changelog: [
+      `Versão oficial ${tag}`,
+      'Melhorias de estabilidade, segurança e performance',
+      'Vortex Privacy Shield e motor Chromium otimizados'
+    ]
+  };
+  fs.writeFileSync(docsVerPath, JSON.stringify(versionInfo, null, 2) + '\n', 'utf8');
+  console.log(`[Site Vortex] docs/version.json atualizado automaticamente para ${tag}!`);
+} catch (e) {
+  console.warn('[Site Vortex] Aviso: Não foi possível atualizar docs/version.json:', e.message);
+}
+
 // 3. Git commit e sincronização
 console.log('\n[2/4] Registrando no Git e sincronizando com GitHub...');
 spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
@@ -132,7 +156,32 @@ if (token) {
   getReq.end();
 }
 
+// Sincroniza tamanho real e artefato gerado em docs/version.json
+const ymlPath = path.join(__dirname, 'dist', 'latest.yml');
+if (fs.existsSync(ymlPath) && fs.existsSync(docsVerPath)) {
+  try {
+    const ymlContent = fs.readFileSync(ymlPath, 'utf8');
+    const sizeMatch = ymlContent.match(/size:\s*(\d+)/);
+    const fileMatch = ymlContent.match(/path:\s*([^\r\n]+)/);
+    if (sizeMatch && sizeMatch[1]) {
+      const bytes = parseInt(sizeMatch[1], 10);
+      const curDocs = JSON.parse(fs.readFileSync(docsVerPath, 'utf8'));
+      curDocs.fileSize = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      if (fileMatch && fileMatch[1]) {
+        curDocs.fileName = fileMatch[1].trim();
+      }
+      fs.writeFileSync(docsVerPath, JSON.stringify(curDocs, null, 2) + '\n', 'utf8');
+      spawnSync('git', ['add', docsVerPath], { stdio: 'ignore' });
+      spawnSync('git', ['commit', '-m', `chore: update site metadata for ${tag}`], { stdio: 'ignore' });
+      spawnSync('git', ['push', 'origin', 'main'], { stdio: 'ignore' });
+      console.log(`[Site Vortex] Metadados finais do site sincronizados com sucesso no GitHub Pages!`);
+    }
+  } catch (e) {}
+}
+
 console.log('\n========================================================');
 console.log(`[4/4] SUCESSO! A versão ${tag} foi publicada no GitHub!`);
 console.log('      Todos os usuários do Vortex serão atualizados automaticamente.');
+console.log('      O site de download oficial em /docs foi atualizado com a nova versão.');
 console.log('========================================================\n');
+

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vortex Browser - O Navegador Moderno, Rápido e Focado em Privacidade</title>
+  <meta name="description" content="Baixe o Vortex Browser. Um navegador moderno, ultrarrápido com bloqueador nativo de anúncios, inteligência artificial integrada e privacidade total. Download gratuito.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%231a73e8'/><path d='M50 15 A35 35 0 0 1 85 50 A35 35 0 0 1 50 85 A35 35 0 0 1 15 50 Z' fill='none' stroke='white' stroke-width='8'/><circle cx='50' cy='50' r='18' fill='%2334a853'/></svg>">
+</head>
+<body>
+
+  <!-- Top Announcement Banner (Similar ao banner da IA do Chrome) -->
+  <aside class="top-announcement" aria-label="Aviso de Novidades">
+    <div class="container">
+      <span class="announcement-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+        </svg>
+        NOVIDADE
+      </span>
+      <span>Peça à IA integrada no Vortex para explicar conceitos, comparar guias ou resumir artigos instantaneamente.</span>
+      <a href="#ia-recursos" class="announcement-btn">Quero testar &rarr;</a>
+    </div>
+  </aside>
+
+  <!-- Sticky Header / Navigation -->
+  <header class="site-header">
+    <div class="container">
+      <div class="nav-wrapper">
+        <a href="#" class="brand" aria-label="Página Inicial do Vortex">
+          <div class="brand-icon-wrapper">
+            <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="46" fill="url(#brandGrad)" />
+              <path d="M50 18 C67 18 82 32 82 50 C82 68 67 82 50 82 C33 82 18 68 18 50 C18 32 33 18 50 18 Z" stroke="#ffffff" stroke-width="6" stroke-dasharray="14 8" stroke-linecap="round"/>
+              <circle cx="50" cy="50" r="22" fill="#ffffff" />
+              <circle cx="50" cy="50" r="14" fill="#1a73e8" />
+              <defs>
+                <linearGradient id="brandGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#4285F4"/>
+                  <stop offset="0.33" stop-color="#34A853"/>
+                  <stop offset="0.66" stop-color="#FBBC05"/>
+                  <stop offset="1" stop-color="#EA4335"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <span class="brand-name">vortex <span>browser</span></span>
+        </a>
+
+        <!-- Desktop Nav Links -->
+        <ul class="nav-links">
+          <li class="nav-item"><a href="#recursos">Recursos</a></li>
+          <li class="nav-item"><a href="#seguranca">Segurança</a></li>
+          <li class="nav-item"><a href="#desempenho">Desempenho</a></li>
+          <li class="nav-item"><a href="#ia-recursos">Inovações de IA</a></li>
+          <li class="nav-item"><a href="#atualizacoes">Atualizações</a></li>
+        </ul>
+
+        <div class="header-actions">
+          <a href="#" class="btn-primary btn-header btn-download-trigger" id="btnHeaderDownload">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Fazer o download do Vortex
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Floating QR Code Badge (Igual print do Chrome à direita) -->
+  <aside class="floating-qr-badge" id="floatingQrBadge" aria-label="Baixar no smartphone">
+    <button class="qr-close-btn" id="qrCloseBtn" title="Fechar">&times;</button>
+    <svg class="qr-code-img" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Falso QR Code estilizado de alta definição -->
+      <rect width="100" height="100" fill="#ffffff"/>
+      <rect x="8" y="8" width="28" height="28" fill="#202124" rx="4"/>
+      <rect x="13" y="13" width="18" height="18" fill="#ffffff" rx="2"/>
+      <rect x="17" y="17" width="10" height="10" fill="#202124" rx="1"/>
+
+      <rect x="64" y="8" width="28" height="28" fill="#202124" rx="4"/>
+      <rect x="69" y="13" width="18" height="18" fill="#ffffff" rx="2"/>
+      <rect x="73" y="17" width="10" height="10" fill="#202124" rx="1"/>
+
+      <rect x="8" y="64" width="28" height="28" fill="#202124" rx="4"/>
+      <rect x="13" y="69" width="18" height="18" fill="#ffffff" rx="2"/>
+      <rect x="17" y="73" width="10" height="10" fill="#202124" rx="1"/>
+
+      <circle cx="50" cy="50" r="10" fill="#1a73e8"/>
+      <!-- QR pixel pattern -->
+      <rect x="42" y="12" width="6" height="6" fill="#202124"/>
+      <rect x="52" y="12" width="6" height="14" fill="#202124"/>
+      <rect x="42" y="24" width="6" height="8" fill="#202124"/>
+      <rect x="12" y="42" width="12" height="6" fill="#202124"/>
+      <rect x="28" y="42" width="8" height="8" fill="#202124"/>
+      <rect x="64" y="42" width="14" height="6" fill="#202124"/>
+      <rect x="82" y="42" width="8" height="14" fill="#202124"/>
+      <rect x="42" y="64" width="14" height="6" fill="#202124"/>
+      <rect x="42" y="76" width="6" height="14" fill="#202124"/>
+      <rect x="64" y="64" width="8" height="14" fill="#202124"/>
+      <rect x="76" y="70" width="14" height="14" fill="#202124"/>
+    </svg>
+    <span class="qr-text">Baixe o Vortex no seu smartphone</span>
+  </aside>
+
+  <main>
+    <!-- HERO SECTION (Estilo idêntico ao Print 2 do Google Chrome) -->
+    <section class="hero-section" id="inicio">
+      <div class="container">
+        <!-- Ícone Central Animado -->
+        <div class="hero-logo-box">
+          <svg class="hero-vortex-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="48" fill="url(#heroGrad)" />
+            <circle cx="50" cy="50" r="30" fill="#ffffff" />
+            <path d="M50 20 A30 30 0 0 1 80 50 L50 50 Z" fill="#ea4335" />
+            <path d="M80 50 A30 30 0 0 1 50 80 L50 50 Z" fill="#fbbc05" />
+            <path d="M50 80 A30 30 0 0 1 20 50 L50 50 Z" fill="#34a853" />
+            <path d="M20 50 A30 30 0 0 1 50 20 L50 50 Z" fill="#4285f4" />
+            <circle cx="50" cy="50" r="18" fill="#1a73e8" />
+            <circle cx="50" cy="50" r="7" fill="#ffffff" />
+            <defs>
+              <linearGradient id="heroGrad" x1="0" y1="0" x2="100" y2="100">
+                <stop stop-color="#4285f4"/>
+                <stop offset="0.5" stop-color="#34a853"/>
+                <stop offset="1" stop-color="#fbbc05"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <h1 class="hero-title">O navegador criado para ser seu</h1>
+        <p class="hero-subtitle">
+          Ultrarrápido, com bloqueador nativo de anúncios, inteligência artificial avançada e respeito absoluto à sua privacidade.
+        </p>
+
+        <!-- CTA Principal de Download -->
+        <div class="hero-cta-group">
+          <a href="#" class="btn-primary btn-hero-download btn-download-trigger" id="btnHeroDownload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Fazer o download do Vortex
+          </a>
+
+          <p class="os-compatibility">
+            Para <strong id="osTargetText">Windows 11/10 64-bit</strong> &bull; Versão <span class="vortex-version-text">v1.2.1</span> (<span class="vortex-size-text">80.5 MB</span>)
+          </p>
+
+          <div class="hero-links-secondary">
+            <a href="#atualizacoes">Quero atualizar o Vortex</a>
+            <span>&bull;</span>
+            <a href="#outras-plataformas">Outras plataformas</a>
+          </div>
+
+          <!-- Checkbox de Consentimento (Igual ao Chrome) -->
+          <label class="consent-checkbox-wrapper">
+            <input type="checkbox" checked id="analyticsConsent">
+            <span>Ajude a melhorar o Vortex enviando dados anônimos de desempenho e relatórios de falhas. <a href="#">Saiba mais</a></span>
+          </label>
+
+          <p class="terms-disclaimer">
+            Ao baixar o Vortex, você concorda com os <a href="#">Termos de Serviço</a> e com a <a href="#">Política de Privacidade</a>.
+          </p>
+        </div>
+
+        <!-- MOCKUP INTERATIVO DO NAVEGADOR VORTEX -->
+        <div class="mockup-wrapper">
+          <div class="browser-window-mockup">
+            <!-- Barra Superior com Abas -->
+            <div class="mockup-titlebar">
+              <div class="mockup-tabs">
+                <div class="mockup-tab active" data-target="mockupPageSpeed" data-url="vortex://performance">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Velocidade & RAM</span>
+                  <span class="mockup-tab-close">✕</span>
+                </div>
+                <div class="mockup-tab" data-target="mockupPageAI" data-url="vortex://ai-assistant">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+                  <span>Vortex IA</span>
+                  <span class="mockup-tab-close">✕</span>
+                </div>
+                <div class="mockup-tab" data-target="mockupPageShield" data-url="vortex://privacy-shield">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>Privacy Shield</span>
+                  <span class="mockup-tab-close">✕</span>
+                </div>
+              </div>
+              <div class="mockup-window-controls">
+                <span class="mockup-dot min"></span>
+                <span class="mockup-dot max"></span>
+                <span class="mockup-dot close"></span>
+              </div>
+            </div>
+
+            <!-- Toolbar / Omnibar -->
+            <div class="mockup-toolbar">
+              <div class="mockup-nav-btns">
+                <span class="mockup-nav-btn">&larr;</span>
+                <span class="mockup-nav-btn">&rarr;</span>
+                <span class="mockup-nav-btn">&#8635;</span>
+              </div>
+              <div class="mockup-omnibar">
+                <span class="mockup-ssl-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  Seguro
+                </span>
+                <span class="mockup-shield-badge">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  28 Bloqueados
+                </span>
+                <span class="mockup-url-text" id="mockupOmnibarUrl">vortex://performance</span>
+              </div>
+              <div class="mockup-actions-btns">
+                <span class="mockup-nav-btn" title="Modo Leitura">📖</span>
+                <span class="mockup-nav-btn" title="Favorito">★</span>
+                <span class="mockup-nav-btn" title="Vortex Menu">⋮</span>
+              </div>
+            </div>
+
+            <!-- Conteúdo da Página do Mockup -->
+            <div class="mockup-viewport">
+              <!-- Aba 1: Velocidade e Recursos -->
+              <div class="mockup-page active" id="mockupPageSpeed">
+                <div class="mockup-demo-hero">
+                  <span class="feature-tag">Arquitetura Ultrarrápida</span>
+                  <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Navegue na velocidade da luz sem travar</h3>
+                  <p style="color: var(--text-secondary); font-size: 14px;">O Vortex foi otimizado para carregar páginas até 2.4x mais rápido que outros navegadores, consumindo até 45% menos memória RAM.</p>
+                  
+                  <div class="mockup-stats-grid">
+                    <div class="mockup-stat-card">
+                      <span class="stat-number">-45%</span>
+                      <span class="stat-label">Menos consumo de memória RAM</span>
+                    </div>
+                    <div class="mockup-stat-card">
+                      <span class="stat-number">2.4x</span>
+                      <span class="stat-label">Abertura instantânea de guias</span>
+                    </div>
+                    <div class="mockup-stat-card">
+                      <span class="stat-number">100%</span>
+                      <span class="stat-label">Livre de anúncios invasivos</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Aba 2: Vortex IA integrada -->
+              <div class="mockup-page" id="mockupPageAI">
+                <div class="mockup-ai-chat">
+                  <div class="ai-bubble user">
+                    Poderia resumir os principais pontos deste artigo e me dar 3 ideias de estudo?
+                  </div>
+                  <div class="ai-bubble assistant">
+                    <strong>Vortex AI:</strong> Claro! O artigo aborda a evolução dos motores web modernos. Os 3 principais pontos são:
+                    <br>&bull; Redução drástica no overhead do renderizador V8.
+                    <br>&bull; Isolamento de processos para segurança em transações bancárias.
+                    <br>&bull; Bloqueio nativo de rastreadores antes mesmo do carregamento do DOM.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Aba 3: Privacy Shield -->
+              <div class="mockup-page" id="mockupPageShield">
+                <div class="mockup-demo-hero">
+                  <span class="feature-tag" style="background: #e6f4ea; color: #137333;">Proteção Ativa</span>
+                  <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Vortex Shield: Seus dados pertencem a você</h3>
+                  <p style="color: var(--text-secondary); font-size: 14px;">Nenhuma empresa vigiando seus cliques ou criando perfis de navegação ocultos.</p>
+                  <div class="mockup-stats-grid">
+                    <div class="mockup-stat-card">
+                      <span class="stat-number" style="color: #137333;">0</span>
+                      <span class="stat-label">Cookies espiões permitidos</span>
+                    </div>
+                    <div class="mockup-stat-card">
+                      <span class="stat-number" style="color: #137333;">HTTPS</span>
+                      <span class="stat-label">Criptografia forçada de ponta a ponta</span>
+                    </div>
+                    <div class="mockup-stat-card">
+                      <span class="stat-number" style="color: #137333;">Anti-Fingerprint</span>
+                      <span class="stat-label">Camada contra rastreamento de hardware</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SUB-NAVIGATION / FILTRO DE RECURSOS (Igual ao Print 1 do Chrome) -->
+    <section class="features-filter-section" id="recursos">
+      <div class="container">
+        <div class="features-pill-nav">
+          <button class="feature-pill-btn active" data-filter="all">Todos os recursos</button>
+          <button class="feature-pill-btn" data-filter="seguranca">Navegação segura</button>
+          <button class="feature-pill-btn" data-filter="privacidade">Controles de privacidade</button>
+          <button class="feature-pill-btn" data-filter="desempenho">Desempenho</button>
+          <button class="feature-pill-btn" data-filter="ia">Inovações de IA</button>
+        </div>
+
+        <!-- Feature Card 1: Navegação Segura -->
+        <div class="feature-showcase-card" data-category="seguranca" id="seguranca">
+          <div class="feature-content">
+            <span class="feature-tag">Segurança Avançada</span>
+            <h2 class="feature-heading">Proteção total contra ameaças e sites perigosos</h2>
+            <p class="feature-description">
+              O Vortex verifica continuamente certificados de segurança SSL/TLS e bloqueia conexões não criptografadas, impedindo phishing, sequestro de sessões e downloads maliciosos.
+            </p>
+            <ul class="feature-checklist">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Indicador visual de criptografia em cada página
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Bloqueio preventivo de pop-ups maliciosos
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Navegação Anônima que não guarda histórico, cookies ou senhas
+              </li>
+            </ul>
+          </div>
+          <div class="feature-visual-box">
+            <div style="background: #e8f0fe; border-radius: 12px; padding: 24px; text-align: center;">
+              <span style="font-size: 48px; display: block; margin-bottom: 12px;">🛡️</span>
+              <h4 style="font-size: 18px; font-weight: 600; color: #1a73e8; margin-bottom: 6px;">Vortex SafeGuard Ativado</h4>
+              <p style="font-size: 13px; color: var(--text-secondary);">100% de proteção nas suas compras online e acesso a bancos.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature Card 2: Vortex Shield e Privacidade -->
+        <div class="feature-showcase-card reverse" data-category="privacidade">
+          <div class="feature-content">
+            <span class="feature-tag" style="background: #e6f4ea; color: #137333;">Privacidade Total</span>
+            <h2 class="feature-heading">Sem rastreadores. Sem espionagem. Sem concessões.</h2>
+            <p class="feature-description">
+              Diferente de navegadores convencionais mantidos por gigantes de anúncios, o Vortex nasceu com a missão de manter suas informações sob sigilo inviolável.
+            </p>
+            <ul class="feature-checklist">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Bloqueio nativo de telemetria e scripts de rastreamento de terceiros
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Limpeza com um clique de cache e dados de navegação
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Zero criação de perfil de usuário para fins comerciais
+              </li>
+            </ul>
+          </div>
+          <div class="feature-visual-box">
+            <div style="background: #f6f8fa; border-radius: 12px; padding: 24px; text-align: center;">
+              <span style="font-size: 48px; display: block; margin-bottom: 12px;">🚫</span>
+              <h4 style="font-size: 18px; font-weight: 600; color: #202124; margin-bottom: 6px;">Bloqueador Nativo de Anúncios</h4>
+              <p style="font-size: 13px; color: var(--text-secondary);">Economize até 50% dos seus dados móveis e tempo de carregamento.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature Card 3: Inovações de IA -->
+        <div class="feature-showcase-card" data-category="ia" id="ia-recursos">
+          <div class="feature-content">
+            <span class="feature-tag" style="background: #fce8e6; color: #c5221f;">Inteligência Artificial</span>
+            <h2 class="feature-heading">A inteligência que você precisa, onde você estiver navegando</h2>
+            <p class="feature-description">
+              O Vortex integra modelos de IA de última geração diretamente na barra de navegação. Resuma páginas em segundos, traduza idiomas em tempo real e tire dúvidas sem sair da aba.
+            </p>
+            <ul class="feature-checklist">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Assistente de resumo de artigos e páginas longas
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Explicações instantâneas de termos e códigos
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Sugestões inteligentes na Omnibar de pesquisa
+              </li>
+            </ul>
+          </div>
+          <div class="feature-visual-box">
+            <div style="background: #fdf2f8; border-radius: 12px; padding: 24px; text-align: center;">
+              <span style="font-size: 48px; display: block; margin-bottom: 12px;">✨</span>
+              <h4 style="font-size: 18px; font-weight: 600; color: #9334e9; margin-bottom: 6px;">Vortex AI Assistant</h4>
+              <p style="font-size: 13px; color: var(--text-secondary);">Disponível com apenas um atalho de teclado no seu dia a dia.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- COMPARATIVO: VORTEX VS OUTROS NAVEGADORES -->
+    <section class="comparison-section" id="desempenho">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Por que migrar para o Vortex?</h2>
+          <p class="section-subtitle">Veja a comparação frente a frente com outros navegadores do mercado.</p>
+        </div>
+
+        <div class="comparison-table-wrapper">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Recursos & Desempenho</th>
+                <th class="vortex-col">⚡ Vortex Browser</th>
+                <th>Google Chrome</th>
+                <th>Microsoft Edge</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Bloqueador de Anúncios Nativo</strong></td>
+                <td class="vortex-col"><span class="badge-yes">✔ Sim, ultra-rápido</span></td>
+                <td><span class="badge-no">✖ Requer extensões</span></td>
+                <td><span class="badge-no">✖ Requer extensões</span></td>
+              </tr>
+              <tr>
+                <td><strong>Consumo de Memória RAM</strong></td>
+                <td class="vortex-col"><span class="badge-yes">✔ Ultraleve (-45%)</span></td>
+                <td><span class="badge-no">Elevado</span></td>
+                <td>Moderado</td>
+              </tr>
+              <tr>
+                <td><strong>Proteção contra Rastreamento de Terceiros</strong></td>
+                <td class="vortex-col"><span class="badge-yes">✔ Rigoroso nativo</span></td>
+                <td><span class="badge-no">✖ Limitado</span></td>
+                <td>Parcial</td>
+              </tr>
+              <tr>
+                <td><strong>Modo Leitura e Picture-in-Picture</strong></td>
+                <td class="vortex-col"><span class="badge-yes">✔ Integrado na Omnibar</span></td>
+                <td>Parcial</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><strong>Atualizações Automáticas Gratuitas</strong></td>
+                <td class="vortex-col"><span class="badge-yes">✔ Em segundo plano</span></td>
+                <td><span class="badge-yes">✔ Sim</span></td>
+                <td><span class="badge-yes">✔ Sim</span></td>
+              </tr>
+              <tr>
+                <td><strong>100% Gratuito e Livre de Telemetria Abusiva</strong></td>
+                <td class="vortex-col"><span class="badge-yes">✔ Total</span></td>
+                <td><span class="badge-no">✖ Coleta intensiva</span></td>
+                <td><span class="badge-no">✖ Coleta intensiva</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SISTEMA DE ATUALIZAÇÕES AUTOMÁTICAS -->
+    <section class="update-system-section" id="atualizacoes">
+      <div class="container">
+        <div class="section-header">
+          <span class="feature-tag">Sempre Atualizado</span>
+          <h2 class="section-title">Atualizações automáticas, simples e sem complicações</h2>
+          <p class="section-subtitle">
+            Quando lançamos uma nova versão do Vortex, você nunca fica desatualizado. O software baixa o patch em segundo plano e notifica com um discreto botão no topo do navegador.
+          </p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <h3 class="step-title">Verificação Inteligente</h3>
+            <p class="step-desc">
+              Toda vez que o Vortex é aberto, ele se conecta em background às nossas releases oficiais e verifica novas melhorias de segurança e performance.
+            </p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <h3 class="step-title">Aviso Discreto estilo Chrome</h3>
+            <p class="step-desc">
+              Um elegante botão verde de destaque <strong>● Atualizar</strong> surge na barra de ferramentas. Você decide quando quer reiniciar.
+            </p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <h3 class="step-title">Instalação em 1 Clique</h3>
+            <p class="step-desc">
+              Com apenas um clique em <strong>Reiniciar para atualizar</strong>, a nova versão é instalada mantendo suas abas abertas, senhas e histórico intactos.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section class="faq-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Perguntas Frequentes</h2>
+          <p class="section-subtitle">Tudo o que você precisa saber antes de fazer o download.</p>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>O Vortex Browser é realmente gratuito?</span>
+              <span class="faq-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+              Sim! O Vortex Browser é 100% gratuito para baixar, instalar e usar tanto para fins pessoais quanto comerciais. Não há versões pagas nem anúncios pagos embutidos.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Como o site sabe qual é a versão mais recente para download?</span>
+              <span class="faq-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+              Este site está conectado diretamente com o pipeline de lançamentos oficiais do Vortex. Toda vez que uma nova versão é publicada, a página atualiza automaticamente os links, número de versão e tamanho do instalador em tempo real.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Posso importar meus favoritos e senhas do Google Chrome?</span>
+              <span class="faq-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+              Sim. Nas Configurações do Vortex, você pode importar com um clique todos os seus favoritos em formato HTML ou sincronizar as preferências em instantes.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Quais são os requisitos mínimos de sistema?</span>
+              <span class="faq-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+              O Vortex roda suavemente em qualquer computador com Windows 10 ou 11 (64 bits), 2 GB de memória RAM e 200 MB de espaço em disco.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OUTRAS PLATAFORMAS / DOWNLOADS ALTERNATIVOS -->
+    <section class="container" id="outras-plataformas" style="padding: 40px 24px; text-align: center;">
+      <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Precisa de outra versão?</h3>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="#" class="btn-secondary btn-download-trigger">
+          📦 Windows 64-bit (Instalador Oficial .exe)
+        </a>
+        <a href="#" class="btn-secondary btn-download-trigger">
+          💼 Versão Portátil (.zip)
+        </a>
+        <a href="https://github.com/marcossou90-web/vortex-browser/releases" target="_blank" rel="noopener" class="btn-secondary">
+          🐙 Ver todas as releases no GitHub
+        </a>
+      </div>
+    </section>
+
+    <!-- BOTTOM CTA BANNER -->
+    <section class="bottom-cta-section">
+      <div class="container">
+        <div class="bottom-cta-box">
+          <h2 style="font-size: clamp(28px, 4vw, 42px); font-weight: 700; margin-bottom: 16px;">Pronto para transformar sua experiência na web?</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 17px;">
+            Baixe o Vortex Browser agora mesmo. Instalação rápida em menos de 1 minuto.
+          </p>
+          <a href="#" class="btn-primary btn-hero-download btn-download-trigger" id="btnBottomDownload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Fazer o download do Vortex
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- CHROME-STYLE MEGA FOOTER (Idêntico ao Print 1 do Chrome) -->
+  <footer class="site-footer">
+    <div class="container">
+      
+      <!-- Siga-nos row -->
+      <div class="footer-social-row">
+        <span class="social-label">Siga-nos</span>
+        <a href="#" class="social-icon-btn" title="YouTube" aria-label="YouTube">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
+        <a href="#" class="social-icon-btn" title="X (Twitter)" aria-label="X">
+          <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://github.com/marcossou90-web/vortex-browser" target="_blank" rel="noopener" class="social-icon-btn" title="GitHub" aria-label="GitHub">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        </a>
+      </div>
+
+      <!-- 5 Colunas de Links -->
+      <div class="footer-columns-grid">
+        <div class="footer-col">
+          <h4>Família Vortex</h4>
+          <ul>
+            <li><a href="#outras-plataformas">Outras plataformas</a></li>
+            <li><a href="#">Vortex Portátil</a></li>
+            <li><a href="#">Vortex para Desktop</a></li>
+            <li><a href="#">Vortex Web Store ↗</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Enterprise</h4>
+          <ul>
+            <li><a href="#">Download Vortex Enterprise ↗</a></li>
+            <li><a href="#">Políticas de Grupo (GPO)</a></li>
+            <li><a href="#">Implantação em Rede</a></li>
+            <li><a href="#">Segurança Corporativa</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Recursos & IA</h4>
+          <ul>
+            <li><a href="#ia-recursos">Vortex AI Assistant ↗</a></li>
+            <li><a href="#seguranca">Privacy Shield Nativo</a></li>
+            <li><a href="#">Modo Leitura</a></li>
+            <li><a href="#">Picture-in-Picture</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Desenvolvedores</h4>
+          <ul>
+            <li><a href="https://github.com/marcossou90-web/vortex-browser" target="_blank" rel="noopener">Código no GitHub ↗</a></li>
+            <li><a href="#">Vortex Beta</a></li>
+            <li><a href="#">Vortex Dev / Canary</a></li>
+            <li><a href="#">Registro de Alterações</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Suporte</h4>
+          <ul>
+            <li><a href="#">Central de Ajuda</a></li>
+            <li><a href="#">Novidades da Versão</a></li>
+            <li><a href="#atualizacoes">Como Atualizar</a></li>
+            <li><a href="#">Dicas e Truques</a></li>
+            <li><a href="#">Reportar um Bug</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Footer Bottom Legal & Idioma -->
+      <div class="footer-bottom-row">
+        <div class="footer-brand-legal">
+          <span style="font-weight: 700; color: var(--text-main); font-size: 15px;">VORTEX</span>
+          <ul class="footer-legal-links">
+            <li><a href="#">Privacidade e Termos</a></li>
+            <li><a href="#">Sobre o Vortex</a></li>
+            <li><a href="#">Segurança</a></li>
+          </ul>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div class="footer-lang-selector">
+            <span>🌐</span>
+            <span>Português - Brasil</span>
+          </div>
+          <span style="font-size: 12px; color: var(--text-tertiary);">Copyright &copy; 2026 Vortex Team.</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- MODAL DE DOWNLOAD INICIADO (Guia em 3 passos estilo Chrome) -->
+  <div class="modal-backdrop" id="downloadModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="download-modal-card">
+      <button class="modal-close-btn" id="modalCloseBtn" aria-label="Fechar janela">&times;</button>
+      
+      <div class="modal-icon-badge">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+
+      <h3 id="modalTitle" style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">Seu download começou!</h3>
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+        Baixando <strong class="vortex-filename-text">Vortex Browser Setup 1.2.1.exe</strong> (<span class="vortex-size-text">80.5 MB</span>).
+      </p>
+
+      <div class="modal-steps-list">
+        <div class="modal-step-item">
+          <span class="modal-step-idx">1</span>
+          <div>
+            <strong>Abra o arquivo baixado</strong>
+            <p style="color: var(--text-secondary); font-size: 12.5px;">Clique no arquivo no canto inferior/superior do seu navegador para abrir o instalador.</p>
+          </div>
+        </div>
+        <div class="modal-step-item">
+          <span class="modal-step-idx">2</span>
+          <div>
+            <strong>Confirme a instalação</strong>
+            <p style="color: var(--text-secondary); font-size: 12.5px;">Se o Windows solicitar permissão, clique em "Sim" ou "Executar".</p>
+          </div>
+        </div>
+        <div class="modal-step-item">
+          <span class="modal-step-idx">3</span>
+          <div>
+            <strong>Pronto! Aproveite o Vortex</strong>
+            <p style="color: var(--text-secondary); font-size: 12.5px;">O Vortex será aberto automaticamente e criará seu atalho na Área de Trabalho.</p>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 16px;">
+        O download não começou automaticamente? <a href="#" class="btn-download-trigger" style="font-weight: 600; text-decoration: underline;">Clique aqui para reiniciar o download</a>.
+      </p>
+
+      <button class="btn-secondary" style="width: 100%;" onclick="document.getElementById('downloadModal').classList.remove('open')">
+        Entendido, fechar
+      </button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "version": "1.2.1",
+  "tag": "v1.2.1",
+  "name": "Vortex Browser v1.2.1",
+  "releaseDate": "2026-10-20T14:23:00.564Z",
+  "fileName": "Vortex Browser Setup 1.2.1.exe",
+  "fileSize": "80.5 MB",
+  "downloadUrl": "https://github.com/marcossou90-web/vortex-browser/releases/download/v1.2.1/Vortex.Browser.Setup.1.2.1.exe",
+  "githubReleaseUrl": "https://github.com/marcossou90-web/vortex-browser/releases/latest",
+  "changelog": [
+    "Motor otimizado com menor consumo de memória RAM",
+    "Vortex Privacy Shield atualizado para bloquear mais de 98% dos anúncios e rastreadores",
+    "Omnibar com pesquisa inteligente e indicador de segurança SSL aprimorado",
+    "Modo Leitura e Picture-in-Picture integrados",
+    "Sistema de atualização automática em segundo plano idêntico ao Chrome"
+  ]
+}
