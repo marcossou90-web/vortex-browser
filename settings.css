@@ -641,6 +641,7 @@ option { background: var(--bg-panel); color: var(--text-main); }
   justify-content: space-between;
   padding: 12px 16px;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 
