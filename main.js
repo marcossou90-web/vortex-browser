@@ -500,11 +500,13 @@ function initDefaultSession() {
 }
 
 function createWindow() {
+  const appIconPath = path.join(__dirname, 'assets', 'icon.png');
   const win = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 900,
     minHeight: 600,
+    icon: fs.existsSync(appIconPath) ? appIconPath : undefined,
     frame: false, // Frame customizado moderno / minimalista estilo Dev
     backgroundColor: '#0a0d14',
     webPreferences: {

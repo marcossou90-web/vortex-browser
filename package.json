@@ -30,6 +30,7 @@
       "settings.js",
       "extensions.html",
       "package.json",
+      "assets/**/*",
       "node_modules/**/*"
     ],
     "publish": [
@@ -42,6 +43,7 @@
       }
     ],
     "win": {
+      "icon": "assets/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -58,6 +60,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Vortex Browser",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
       "deleteAppDataOnUninstall": true
     }
   },
