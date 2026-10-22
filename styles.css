@@ -140,29 +140,43 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: var(--input-bg);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 8px 8px 4px 4px;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   flex: 0 1 220px;
   min-width: 120px;
   max-width: 240px;
+  position: relative;
 }
 
 .tab:hover {
   background: var(--hover-bg);
   color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .tab.active {
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.35);
-  color: var(--accent-cyan);
-  box-shadow: 0 2px 8px var(--accent-glow);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.15) 0%, rgba(13, 17, 23, 0.95) 100%);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px var(--accent-cyan);
 }
 
 .tab.suspended {
@@ -228,38 +242,45 @@ body {
 
 .tab-close {
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  opacity: 0.5;
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
 }
 
 .tab-close:hover {
   opacity: 1;
+  background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
 }
 
 .btn-new-tab {
-  background: transparent;
-  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  margin-left: 2px;
+  margin-left: 4px;
   padding: 0;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
 }
 
 .btn-new-tab:hover {
-  background: rgba(56,189,248,0.13);
-  border-color: rgba(56,189,248,0.35);
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.45);
   color: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-glow);
+  transform: scale(1.05);
 }
 
 .btn-new-tab svg {
@@ -310,38 +331,48 @@ body {
 
 .nav-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-muted);
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: 0.2s;
+  transition: all 0.18s ease;
 }
 
 .nav-btn:hover {
   background: var(--hover-bg);
+  border-color: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.nav-btn:active {
+  transform: translateY(0) scale(0.96);
 }
 
 .address-bar-wrapper {
   flex: 1;
   display: flex;
   align-items: center;
-  background: var(--bg-card);
+  background: rgba(22, 27, 34, 0.75);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 6px 12px;
+  border-radius: 20px;
+  padding: 6px 14px;
   gap: 8px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
 .address-bar-wrapper:focus-within {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 12px var(--accent-glow);
+  background: rgba(13, 17, 23, 0.95);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25), 0 0 0 1px var(--accent-cyan);
 }
 
 .address-input {
@@ -455,59 +486,99 @@ body {
 .security-badge {
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: var(--input-bg);
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s ease;
   -webkit-user-select: none;
   user-select: none;
 }
 
 .security-badge.secure {
-  color: var(--accent-emerald);
+  color: #34d399;
   background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
 }
 
 .security-badge.insecure {
   color: #fbbf24;
   background: rgba(251, 191, 36, 0.12);
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: rgba(251, 191, 36, 0.35);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.15);
 }
 
 .security-badge.danger {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 .security-badge:hover {
   filter: brightness(1.2);
+  transform: translateY(-1px);
 }
 
 .shield-badge {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: var(--accent-emerald);
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--accent-cyan);
+  padding: 4px 9px;
+  border-radius: 14px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s ease;
 }
 
 .shield-badge:hover {
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(56, 189, 248, 0.22);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* Indicador e Gerenciador de Cookies da Página no Omnibar */
+.cookie-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  padding: 4px 9px;
+  border-radius: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.cookie-badge:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+  transform: translateY(-1px);
+}
+
+.cookie-badge-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.cookie-badge-count {
+  font-size: 11.5px;
+  font-weight: 700;
 }
 
 .toolbar-actions {
@@ -768,31 +839,98 @@ webview:not(.devtools-dock-webview) {
   color: var(--text-muted);
 }
 
+.home-search-engines {
+  display: flex;
+  gap: 8px;
+  margin-top: -24px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.home-engine-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.home-engine-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.home-engine-chip.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
 .quick-tiles {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   width: 100%;
-  max-width: 580px;
+  max-width: 620px;
 }
 
 .tile {
-  background: var(--bg-card);
+  background: rgba(22, 27, 34, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tile:hover {
-  background: rgba(56, 189, 248, 0.08);
-  border-color: rgba(56, 189, 248, 0.3);
-  transform: translateY(-2px);
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.15);
+  transform: translateY(-4px);
+}
+
+.home-security-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.home-security-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-sec-icon {
+  font-size: 13px;
+}
+
+.home-security-dot {
+  opacity: 0.3;
 }
 
 .tile-icon {
@@ -891,6 +1029,178 @@ webview:not(.devtools-dock-webview) {
 
 .btn-danger:hover {
   background: rgba(239, 68, 68, 0.25);
+}
+
+/* ── Modal de Segurança de Página & Cookies Avançado ── */
+.site-security-modal {
+  width: 500px;
+  max-width: 95vw;
+}
+
+.modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.security-modal-icon {
+  font-size: 24px;
+}
+
+.security-modal-domain {
+  font-size: 12px;
+  color: var(--accent-cyan);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.privacy-card-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.cookie-security-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cookie-site-count-badge {
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.modal-cookie-quick-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.btn-cookie-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-cookie-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-cookie-accept {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.btn-cookie-accept:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.btn-cookie-clear {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.btn-cookie-clear:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-cookie-view {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: var(--accent-cyan);
+}
+
+.btn-cookie-view:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.site-cookies-detail-list {
+  margin-top: 10px;
+  width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.site-cookies-detail-list.hidden {
+  display: none !important;
+}
+
+.site-cookie-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.site-cookie-name {
+  font-weight: 600;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.site-cookie-meta {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.btn-site-cookie-del {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.btn-site-cookie-del:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.modal-footer-links {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.modal-link-settings {
+  font-size: 12px;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.modal-link-settings:hover {
+  text-decoration: underline;
+  opacity: 0.85;
 }
 
 /* Download Toast Notification */

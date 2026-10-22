@@ -32,6 +32,14 @@ contextBridge.exposeInMainWorld('vortexAPI', {
   syncChromeData: () => ipcRenderer.invoke('sync-chrome-data'),
   exportVault: () => ipcRenderer.invoke('export-vault'),
   importVault: (data) => ipcRenderer.invoke('import-vault', data),
+  // Módulo de Gerenciamento de Cookies e Segurança de Sites
+  getCookies: (filter) => ipcRenderer.invoke('get-cookies', filter),
+  deleteCookie: (data) => ipcRenderer.invoke('delete-cookie', data),
+  clearCookiesDomain: (domain) => ipcRenderer.invoke('clear-cookies-domain', domain),
+  clearAllCookies: () => ipcRenderer.invoke('clear-all-cookies'),
+  getSiteSecurityInfo: (url) => ipcRenderer.invoke('get-site-security-info', url),
+  getCookieSettings: () => ipcRenderer.invoke('get-cookie-settings'),
+  setCookieSettings: (settings) => ipcRenderer.invoke('set-cookie-settings', settings),
   // Módulo de VPN Gratuita Integrada
   setVPNProxy: (config) => ipcRenderer.invoke('set-vpn-proxy', config),
   getVPNStatus: () => ipcRenderer.invoke('get-vpn-status'),

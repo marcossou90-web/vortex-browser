@@ -90,6 +90,12 @@
         </svg>
         <span id="trackerCountBadge">0</span>
       </div>
+
+      <!-- Indicador e Gerenciador de Cookies da Página Atual -->
+      <div class="cookie-badge" id="btnCookieBadge" title="Cookies e Consentimento da Página (Clique para gerenciar)">
+        <span class="cookie-badge-icon">🍪</span>
+        <span class="cookie-badge-count" id="cookieCountBadge">0</span>
+      </div>
       <input type="text" class="address-input" id="addressInput" placeholder="Digite uma URL ou pesquise com foco em privacidade..." autocomplete="off" spellcheck="false" />
 
       <!-- Dropdown de Autocomplete / Sugestões (Omnibox igual Chrome) -->
@@ -555,25 +561,69 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" class="search-input-home" id="homeSearchInput" placeholder="Buscar com DuckDuckGo sem rastreamento..." />
+        <input type="text" class="search-input-home" id="homeSearchInput" placeholder="Buscar com foco em privacidade..." />
       </div>
 
+      <!-- Seletores Rápidos de Motor de Busca na Home -->
+      <div class="home-search-engines" id="homeSearchEngines">
+        <button type="button" class="home-engine-chip active" data-engine="duckduckgo">🦆 DuckDuckGo</button>
+        <button type="button" class="home-engine-chip" data-engine="google">🔍 Google</button>
+        <button type="button" class="home-engine-chip" data-engine="brave">🦁 Brave</button>
+        <button type="button" class="home-engine-chip" data-engine="bing">🌐 Bing</button>
+        <button type="button" class="home-engine-chip" data-engine="youtube">▶️ YouTube</button>
+      </div>
+
+      <!-- Quick Launch Tiles (Speed Dial Moderno) -->
       <div class="quick-tiles">
         <div class="tile" data-url="https://github.com">
           <span class="tile-icon">🐙</span>
           <span class="tile-title">GitHub</span>
         </div>
+        <div class="tile" data-url="https://youtube.com">
+          <span class="tile-icon">▶️</span>
+          <span class="tile-title">YouTube</span>
+        </div>
         <div class="tile" data-url="https://duckduckgo.com">
           <span class="tile-icon">🦆</span>
           <span class="tile-title">DuckDuckGo</span>
+        </div>
+        <div class="tile" data-url="https://chatgpt.com">
+          <span class="tile-icon">🤖</span>
+          <span class="tile-title">ChatGPT</span>
+        </div>
+        <div class="tile" data-url="https://reddit.com">
+          <span class="tile-icon">💬</span>
+          <span class="tile-title">Reddit</span>
         </div>
         <div class="tile" data-url="https://news.ycombinator.com">
           <span class="tile-icon">⚡</span>
           <span class="tile-title">Hacker News</span>
         </div>
+        <div class="tile" data-url="https://wikipedia.org">
+          <span class="tile-icon">📚</span>
+          <span class="tile-title">Wikipédia</span>
+        </div>
         <div class="tile" data-url="https://developer.mozilla.org">
           <span class="tile-icon">🌐</span>
           <span class="tile-title">MDN Web</span>
+        </div>
+      </div>
+
+      <!-- Status de Proteção Vortex na Home -->
+      <div class="home-security-banner">
+        <div class="home-security-item">
+          <span class="home-sec-icon">🛡️</span>
+          <span>Vortex Shield Ativo</span>
+        </div>
+        <div class="home-security-dot">•</div>
+        <div class="home-security-item">
+          <span class="home-sec-icon">🍪</span>
+          <span>Proteção de Cookies & LGPD</span>
+        </div>
+        <div class="home-security-dot">•</div>
+        <div class="home-security-item">
+          <span class="home-sec-icon">⚡</span>
+          <span>Túnel Seguro & Isolado</span>
         </div>
       </div>
     </div>
@@ -597,26 +647,69 @@
     </div>
   </main>
 
-  <!-- Security Details Modal -->
+  <!-- Security & Cookie Management Modal -->
   <div class="modal-overlay" id="securityModal">
-    <div class="modal-content">
+    <div class="modal-content site-security-modal">
       <div class="modal-header">
-        <h3 class="modal-title" id="securityModalTitle">🔒 Segurança da Página</h3>
+        <div class="modal-title-wrap">
+          <span class="security-modal-icon" id="securityModalMainIcon">🔒</span>
+          <div>
+            <h3 class="modal-title" id="securityModalTitle">Segurança da Página & Cookies</h3>
+            <div class="security-modal-domain" id="securityModalDomain">Página interna Vortex</div>
+          </div>
+        </div>
         <button class="win-btn" id="btnCloseSecurityModal">✕</button>
       </div>
+
+      <!-- Card Conexão Criptografada -->
       <div class="privacy-card">
-        <div>
-          <div class="privacy-card-title">Status da Conexão</div>
+        <div class="privacy-card-left">
+          <div class="privacy-card-title" id="securityModalConnTitle">Conexão Criptografada (HTTPS)</div>
           <div class="privacy-card-desc" id="securityModalDesc">Verificando criptografia SSL/TLS...</div>
         </div>
         <span class="privacy-badge-status" id="securityModalBadge">SEGURO</span>
       </div>
-      <div class="privacy-card">
-        <div>
-          <div class="privacy-card-title">Motor de Renderização</div>
-          <div class="privacy-card-desc">Chromium V8 com isolamento de contexto (Sandboxed)</div>
+
+      <!-- Card Cookies do Site e Consentimento -->
+      <div class="privacy-card cookie-security-card">
+        <div class="privacy-card-left">
+          <div class="privacy-card-title">
+            <span>🍪 Cookies & Dados Armazenados</span>
+            <span class="cookie-site-count-badge" id="modalSiteCookieCountBadge">0 cookies</span>
+          </div>
+          <div class="privacy-card-desc" id="modalSiteCookieDesc">Cookies salvos por esta página no seu computador para sessão ou preferências.</div>
+          <div class="modal-cookie-quick-buttons">
+            <button type="button" class="btn-cookie-action btn-cookie-accept" id="btnAcceptCookiesCurrentSite">✓ Aceitar Cookies do Site</button>
+            <button type="button" class="btn-cookie-action btn-cookie-clear" id="btnClearSiteCookiesModal">🗑️ Limpar Cookies deste Site</button>
+            <button type="button" class="btn-cookie-action btn-cookie-view" id="btnToggleSiteCookiesDetail">Ver Detalhes ▼</button>
+          </div>
+          <!-- Detalhes dos Cookies do Site -->
+          <div class="site-cookies-detail-list hidden" id="siteCookiesDetailList">
+            <!-- Renderizado dinamicamente via renderer.js -->
+          </div>
         </div>
-        <span class="privacy-badge-status status-active">ATIVO</span>
+      </div>
+
+      <!-- Card Assistente de Banners de Consentimento (LGPD / GDPR) -->
+      <div class="privacy-card">
+        <div class="privacy-card-left">
+          <div class="privacy-card-title">🤖 Assistente de Consentimento de Cookies</div>
+          <div class="privacy-card-desc" id="modalAutoConsentDesc">O Vortex Browser gerencia e aceita automaticamente avisos de cookies para navegação sem telas bloqueadas.</div>
+        </div>
+        <span class="privacy-badge-status status-active" id="modalAutoConsentBadge">ATIVO</span>
+      </div>
+
+      <!-- Card Motor de Renderização & Vortex Shield -->
+      <div class="privacy-card">
+        <div class="privacy-card-left">
+          <div class="privacy-card-title">🛡️ Vortex Shield Protection</div>
+          <div class="privacy-card-desc" id="modalShieldSiteDesc">Bloqueador de rastreadores, telemetria e anúncios ativado para proteger seus dados.</div>
+        </div>
+        <span class="privacy-badge-status status-active">PROTEGIDO</span>
+      </div>
+
+      <div class="modal-footer-links">
+        <a href="#" id="linkOpenCookieSettings" class="modal-link-settings">⚙️ Abrir Configurações Globais de Cookies e Privacidade →</a>
       </div>
     </div>
   </div>

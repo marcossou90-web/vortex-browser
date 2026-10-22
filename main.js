@@ -31,6 +31,35 @@ try {
 } catch (e) {
   console.error('Erro ao definir userData:', e);
 }
+
+// ── Configurações de Cookies e Armazenamento do Usuário ──
+const cookieSettingsFile = path.join(vortexDataDir, 'cookie-settings.json');
+let cookieSettings = {
+  policy: 'block_third_party', // 'allow_all' | 'block_third_party' | 'block_all'
+  autoAcceptBanners: true,
+  clearOnExit: false
+};
+
+try {
+  if (fs.existsSync(cookieSettingsFile)) {
+    const raw = fs.readFileSync(cookieSettingsFile, 'utf8');
+    cookieSettings = { ...cookieSettings, ...JSON.parse(raw) };
+  }
+} catch (e) {
+  console.warn('Aviso ao carregar cookie-settings.json:', e.message);
+}
+
+function saveCookieSettings(data) {
+  try {
+    cookieSettings = { ...cookieSettings, ...data };
+    fs.writeFileSync(cookieSettingsFile, JSON.stringify(cookieSettings, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('Erro ao salvar cookie-settings.json:', e);
+    return false;
+  }
+}
+
 // ── Gerenciamento de Múltiplas Janelas / Instâncias (Estilo Google Chrome) ──
 // Ao clicar no atalho no desktop com o Vortex já aberto, abre uma NOVA JANELA independente.
 const gotTheLock = app.requestSingleInstanceLock();
@@ -444,6 +473,46 @@ function initDefaultSession() {
     callback({ requestHeaders: details.requestHeaders });
   });
 
+  // Política de Proteção e Bloqueio de Cookies
+  defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = { ...details.responseHeaders };
+    
+    // Se a política for bloquear todos os cookies
+    if (cookieSettings.policy === 'block_all') {
+      delete responseHeaders['set-cookie'];
+      delete responseHeaders['Set-Cookie'];
+      callback({ responseHeaders });
+      return;
+    }
+    
+    // Se a política for bloquear cookies de terceiros
+    if (cookieSettings.policy === 'block_third_party' && (responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'])) {
+      try {
+        const reqHost = new URL(details.url).hostname.toLowerCase();
+        let topHost = '';
+        if (details.initiator) {
+          topHost = new URL(details.initiator).hostname.toLowerCase();
+        } else if (details.referrer) {
+          topHost = new URL(details.referrer).hostname.toLowerCase();
+        }
+        
+        const getBaseDomain = (h) => {
+          const parts = h.split('.');
+          if (parts.length >= 2) return parts.slice(-2).join('.');
+          return h;
+        };
+
+        if (topHost && getBaseDomain(reqHost) !== getBaseDomain(topHost) && details.resourceType !== 'mainFrame') {
+          // Requisição de terceiro inserindo cookie de rastreamento
+          delete responseHeaders['set-cookie'];
+          delete responseHeaders['Set-Cookie'];
+        }
+      } catch (e) {}
+    }
+
+    callback({ responseHeaders });
+  });
+
   // Gerenciador Nativo de Downloads HTTP/HTTPS do Vortex
   defaultSession.on('will-download', (event, item, webContents) => {
     const fileName = item.getFilename();
@@ -646,6 +715,114 @@ function isTrustedSender(event) {
   if (!win || win.isDestroyed()) return false;
   return event.sender.id === win.webContents.id;
 }
+
+// ── IPC Handlers: Gerenciamento Avançado de Cookies e Segurança de Sites ─────
+ipcMain.handle('get-cookies', async (event, filter = {}) => {
+  if (!isTrustedSender(event)) return { success: false, cookies: [] };
+  try {
+    const cookies = await session.defaultSession.cookies.get(filter || {});
+    return { success: true, cookies };
+  } catch (err) {
+    return { success: false, error: err.message, cookies: [] };
+  }
+});
+
+ipcMain.handle('delete-cookie', async (event, { url, name }) => {
+  if (!isTrustedSender(event)) return { success: false, error: 'Acesso negado' };
+  try {
+    if (!url || !name) return { success: false, error: 'Parâmetros inválidos' };
+    await session.defaultSession.cookies.remove(url, name);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('clear-cookies-domain', async (event, domain) => {
+  if (!isTrustedSender(event)) return { success: false, error: 'Acesso negado' };
+  try {
+    if (!domain) return { success: false, error: 'Domínio inválido' };
+    const cookies = await session.defaultSession.cookies.get({ domain });
+    let removed = 0;
+    for (const c of cookies) {
+      const protocol = c.secure ? 'https' : 'http';
+      const cleanDomain = c.domain.startsWith('.') ? c.domain.substring(1) : c.domain;
+      const url = `${protocol}://${cleanDomain}${c.path || '/'}`;
+      try {
+        await session.defaultSession.cookies.remove(url, c.name);
+        removed++;
+      } catch (e) {}
+    }
+    return { success: true, count: removed };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('clear-all-cookies', async (event) => {
+  if (!isTrustedSender(event)) return { success: false, error: 'Acesso negado' };
+  try {
+    await session.defaultSession.clearStorageData({ storages: ['cookies'] });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('get-site-security-info', async (event, pageUrl) => {
+  if (!isTrustedSender(event)) return { success: false };
+  try {
+    if (!pageUrl || pageUrl.startsWith('about:') || pageUrl.startsWith('vortex://')) {
+      return { 
+        success: true,
+        isInternal: true, 
+        secure: true, 
+        protocol: 'vortex://', 
+        domain: 'vortex://interna', 
+        cookieCount: 0, 
+        cookies: [] 
+      };
+    }
+    let urlObj;
+    try {
+      urlObj = new URL(pageUrl);
+    } catch(e) {
+      return { success: false, isInternal: false, secure: false, error: 'URL inválida', cookieCount: 0, cookies: [] };
+    }
+    const domain = urlObj.hostname;
+    const cookies = await session.defaultSession.cookies.get({ domain });
+    return {
+      success: true,
+      domain,
+      protocol: urlObj.protocol,
+      isHttps: urlObj.protocol === 'https:',
+      cookieCount: cookies.length,
+      cookies: cookies.map(c => ({
+        name: c.name,
+        value: c.value ? (c.value.length > 50 ? c.value.substring(0, 50) + '...' : c.value) : '',
+        domain: c.domain,
+        path: c.path,
+        secure: !!c.secure,
+        httpOnly: !!c.httpOnly,
+        session: !!c.session,
+        expires: c.expirationDate ? new Date(c.expirationDate * 1000).toLocaleDateString('pt-BR') : 'Sessão'
+      }))
+    };
+  } catch (err) {
+    return { success: false, error: err.message, cookieCount: 0, cookies: [] };
+  }
+});
+
+ipcMain.handle('get-cookie-settings', (event) => {
+  if (!isTrustedSender(event)) return cookieSettings;
+  return cookieSettings;
+});
+
+ipcMain.handle('set-cookie-settings', (event, newSettings) => {
+  if (!isTrustedSender(event)) return { success: false };
+  saveCookieSettings(newSettings);
+  return { success: true, settings: cookieSettings };
+});
 
 // ── IPC Handlers: Gerenciador de Senhas e Sincronização por E-mail ─────
 ipcMain.handle('get-saved-passwords', (event) => {
@@ -1424,3 +1601,12 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+app.on('before-quit', async () => {
+  if (cookieSettings && cookieSettings.clearOnExit) {
+    try {
+      await session.defaultSession.clearStorageData({ storages: ['cookies'] });
+    } catch (e) {}
+  }
+});
+

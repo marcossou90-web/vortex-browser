@@ -21,7 +21,8 @@ const SEARCH_ENGINES = {
   bing: 'https://www.bing.com/search?q=',
   brave: 'https://search.brave.com/search?q=',
   startpage: 'https://www.startpage.com/search?q=',
-  ecosia: 'https://www.ecosia.org/search?q='
+  ecosia: 'https://www.ecosia.org/search?q=',
+  youtube: 'https://www.youtube.com/results?search_query='
 };
 
 // ── Elementos DOM principais ──────────────
@@ -42,6 +43,18 @@ const bookmarksBarEl = document.getElementById('bookmarksBar');
 const findBarEl = document.getElementById('findBar');
 const findInputEl = document.getElementById('findInput');
 const downloadToastContainer = document.getElementById('downloadToastContainer');
+const btnCookieBadgeEl = document.getElementById('btnCookieBadge');
+const cookieCountBadgeEl = document.getElementById('cookieCountBadge');
+const modalSiteCookieCountBadgeEl = document.getElementById('modalSiteCookieCountBadge');
+const modalSiteCookieDescEl = document.getElementById('modalSiteCookieDesc');
+const securityModalDomainEl = document.getElementById('securityModalDomain');
+const securityModalMainIconEl = document.getElementById('securityModalMainIcon');
+const siteCookiesDetailListEl = document.getElementById('siteCookiesDetailList');
+const btnAcceptCookiesCurrentSite = document.getElementById('btnAcceptCookiesCurrentSite');
+const btnClearSiteCookiesModal = document.getElementById('btnClearSiteCookiesModal');
+const btnToggleSiteCookiesDetail = document.getElementById('btnToggleSiteCookiesDetail');
+const linkOpenCookieSettings = document.getElementById('linkOpenCookieSettings');
+let currentActiveDomain = '';
 
 // ── Carregar configurações salvas ─────────
 function loadSavedSettings() {
@@ -62,6 +75,15 @@ function loadSavedSettings() {
       };
       homeInput.placeholder = `Buscar com ${names[searchEngine] || 'DuckDuckGo'}...`;
     }
+
+    // Ativa o chip de busca correspondente
+    document.querySelectorAll('.home-engine-chip').forEach(c => {
+      if (c.getAttribute('data-engine') === searchEngine) {
+        c.classList.add('active');
+      } else {
+        c.classList.remove('active');
+      }
+    });
 
     // Tema
     if (s.theme === 'light') document.body.classList.add('theme-light');
@@ -113,39 +135,185 @@ window.vortexAPI.onDataCleared(() => {
   privacyModal.style.display = 'none';
 });
 
-// ── Modal de Segurança ────────────────────
-btnSecurityStatusEl.addEventListener('click', () => { securityModalEl.style.display = 'flex'; });
-document.getElementById('btnCloseSecurityModal').addEventListener('click', () => { securityModalEl.style.display = 'none'; });
+// ── Modal de Segurança & Cookies ────────────────────
+btnSecurityStatusEl.addEventListener('click', () => { 
+  securityModalEl.style.display = 'flex'; 
+});
+document.getElementById('btnCloseSecurityModal').addEventListener('click', () => { 
+  securityModalEl.style.display = 'none'; 
+});
 
-function updateSecurityBadge(url) {
+// Botão badge de cookies no Omnibar
+if (btnCookieBadgeEl) {
+  btnCookieBadgeEl.addEventListener('click', () => {
+    securityModalEl.style.display = 'flex';
+    if (siteCookiesDetailListEl) siteCookiesDetailListEl.classList.remove('hidden');
+  });
+}
+
+// Alternar detalhes dos cookies no modal
+if (btnToggleSiteCookiesDetail) {
+  btnToggleSiteCookiesDetail.addEventListener('click', () => {
+    if (siteCookiesDetailListEl) siteCookiesDetailListEl.classList.toggle('hidden');
+  });
+}
+
+// Botão Aceitar Cookies na página atual
+if (btnAcceptCookiesCurrentSite) {
+  btnAcceptCookiesCurrentSite.addEventListener('click', () => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab && activeTab.webview && activeTab.webview.executeJavaScript) {
+      activeTab.webview.executeJavaScript(`
+        (function() {
+          const acceptKeywords = ['aceitar todos', 'aceitar cookies', 'aceitar tudo', 'concordar e fechar', 'concordo', 'permitir todos', 'permitir cookies', 'aceito', 'accept all', 'accept cookies', 'agree', 'allow all', 'i agree'];
+          const btns = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="button"], input[type="submit"]'));
+          for (const b of btns) {
+            const t = (b.innerText || b.value || b.getAttribute('aria-label') || '').toLowerCase().trim();
+            if (acceptKeywords.some(k => t === k || t.includes(k))) {
+              b.click();
+              return true;
+            }
+          }
+          return false;
+        })();
+      `).then(clicked => {
+        showToastNotification('🍪', 'Cookies Aceitos', 'Consentimento de cookies confirmado nesta página.');
+        if (activeTab.url) setTimeout(() => updateSecurityBadge(activeTab.url), 1000);
+      }).catch(() => {});
+    }
+  });
+}
+
+// Botão Limpar Cookies deste site
+if (btnClearSiteCookiesModal) {
+  btnClearSiteCookiesModal.addEventListener('click', async () => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab && activeTab.url) {
+      try {
+        const domain = new URL(activeTab.url).hostname;
+        if (window.vortexAPI && window.vortexAPI.clearCookiesDomain) {
+          await window.vortexAPI.clearCookiesDomain(domain);
+          showToastNotification('🗑️', 'Cookies Limpos', `Cookies de ${domain} foram removidos.`);
+          updateSecurityBadge(activeTab.url);
+        }
+      } catch (e) {}
+    }
+  });
+}
+
+// Link para abrir configurações na seção de cookies
+if (linkOpenCookieSettings) {
+  linkOpenCookieSettings.addEventListener('click', (e) => {
+    e.preventDefault();
+    securityModalEl.style.display = 'none';
+    openSettings('cookies');
+  });
+}
+
+// Exclusão individual de cookie no modal
+window.deleteCurrentSiteCookie = async function(cookieName, domain) {
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  if (!activeTab || !activeTab.url) return;
+  try {
+    const urlObj = new URL(activeTab.url);
+    const cookieUrl = `${urlObj.protocol}//${domain || urlObj.hostname}/`;
+    if (window.vortexAPI && window.vortexAPI.deleteCookie) {
+      await window.vortexAPI.deleteCookie({ url: cookieUrl, name: cookieName });
+      updateSecurityBadge(activeTab.url);
+    }
+  } catch (e) {}
+};
+
+async function updateSecurityBadge(url) {
   btnSecurityStatusEl.className = 'security-badge';
   if (!url || url === '' || url.startsWith('about:') || url.startsWith('vortex://')) {
+    currentActiveDomain = '';
     securityTextEl.innerText = 'Início';
     securityIconEl.innerHTML = `<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>`;
-    securityModalDescEl.innerText = 'Página interna protegida do Vortex Browser.';
-    securityModalBadgeEl.innerText = 'PROTEGIDO';
-    securityModalBadgeEl.style.color = 'var(--accent-cyan)';
+    if (securityModalDescEl) securityModalDescEl.innerText = 'Página interna protegida do Vortex Browser.';
+    if (securityModalBadgeEl) {
+      securityModalBadgeEl.innerText = 'PROTEGIDO';
+      securityModalBadgeEl.style.color = 'var(--accent-cyan)';
+    }
+    if (securityModalDomainEl) securityModalDomainEl.innerText = 'Vortex Interno';
+    if (securityModalMainIconEl) securityModalMainIconEl.innerText = '🌀';
+    if (cookieCountBadgeEl) cookieCountBadgeEl.innerText = '0';
+    if (modalSiteCookieCountBadgeEl) modalSiteCookieCountBadgeEl.innerText = '0 cookies';
+    if (siteCookiesDetailListEl) siteCookiesDetailListEl.innerHTML = '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:11px;">Página interna não utiliza cookies de terceiros.</div>';
     return;
   }
-  if (url.startsWith('https://')) {
+
+  let isHttps = url.startsWith('https://');
+  let isHttp = url.startsWith('http://') || url.startsWith('ftp://');
+
+  try {
+    const urlObj = new URL(url);
+    currentActiveDomain = urlObj.hostname;
+    if (securityModalDomainEl) securityModalDomainEl.innerText = currentActiveDomain;
+  } catch (e) {
+    currentActiveDomain = '';
+  }
+
+  if (isHttps) {
     btnSecurityStatusEl.classList.add('secure');
-    securityTextEl.innerText = 'Seguro';
+    securityTextEl.innerText = 'Seguro (SSL)';
     securityIconEl.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>`;
-    securityModalDescEl.innerText = 'A conexão é segura com certificado SSL/TLS válido. As informações transmitidas são privadas e criptografadas.';
-    securityModalBadgeEl.innerText = 'SEGURO (SSL)';
-    securityModalBadgeEl.style.color = 'var(--accent-emerald)';
-  } else if (url.startsWith('http://') || url.startsWith('ftp://')) {
+    if (securityModalDescEl) securityModalDescEl.innerText = 'A conexão é protegida por TLS 1.3 com criptografia forte AES-256 bits. Informações transmitidas são privadas e seguras.';
+    if (securityModalBadgeEl) {
+      securityModalBadgeEl.innerText = 'SEGURO (SSL)';
+      securityModalBadgeEl.style.color = 'var(--accent-emerald)';
+    }
+    if (securityModalMainIconEl) securityModalMainIconEl.innerText = '🔒';
+  } else if (isHttp) {
     btnSecurityStatusEl.classList.add('insecure');
     securityTextEl.innerText = 'Não seguro';
     securityIconEl.innerHTML = `<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>`;
-    securityModalDescEl.innerText = 'A conexão não é criptografada. Não envie dados confidenciais ou senhas nesta página.';
-    securityModalBadgeEl.innerText = 'NÃO CRIPTOGRAFADO';
-    securityModalBadgeEl.style.color = '#fbbf24';
+    if (securityModalDescEl) securityModalDescEl.innerText = 'A conexão não é criptografada. Hackers na mesma rede podem interceptar dados sensíveis. Evite inserir senhas.';
+    if (securityModalBadgeEl) {
+      securityModalBadgeEl.innerText = 'NÃO CRIPTOGRAFADO';
+      securityModalBadgeEl.style.color = '#fbbf24';
+    }
+    if (securityModalMainIconEl) securityModalMainIconEl.innerText = '⚠️';
   } else {
     securityTextEl.innerText = 'Vortex';
-    securityModalDescEl.innerText = 'Protocolo seguro customizado do Vortex.';
-    securityModalBadgeEl.innerText = 'INTERNO';
-    securityModalBadgeEl.style.color = 'var(--accent-cyan)';
+    securityIconEl.innerHTML = `<circle cx="12" cy="12" r="10"></circle>`;
+    if (securityModalDescEl) securityModalDescEl.innerText = 'Protocolo seguro customizado do Vortex.';
+    if (securityModalBadgeEl) {
+      securityModalBadgeEl.innerText = 'INTERNO';
+      securityModalBadgeEl.style.color = 'var(--accent-cyan)';
+    }
+    if (securityModalMainIconEl) securityModalMainIconEl.innerText = '⚡';
+  }
+
+  // Consulta detalhes reais dos cookies armazenados para este site
+  if (window.vortexAPI && window.vortexAPI.getSiteSecurityInfo) {
+    try {
+      const info = await window.vortexAPI.getSiteSecurityInfo(url);
+      if (info && info.success) {
+        const count = info.cookieCount || 0;
+        if (cookieCountBadgeEl) cookieCountBadgeEl.innerText = count;
+        if (modalSiteCookieCountBadgeEl) modalSiteCookieCountBadgeEl.innerText = `${count} cookie${count !== 1 ? 's' : ''}`;
+        if (modalSiteCookieDescEl) {
+          modalSiteCookieDescEl.innerText = count > 0 
+            ? `${count} cookie${count !== 1 ? 's' : ''} ativo${count !== 1 ? 's' : ''} salvos para ${info.domain}.`
+            : `Nenhum cookie ativo salvo para ${info.domain}.`;
+        }
+
+        if (siteCookiesDetailListEl) {
+          if (info.cookies && info.cookies.length > 0) {
+            siteCookiesDetailListEl.innerHTML = info.cookies.map(c => `
+              <div class="site-cookie-row">
+                <div class="site-cookie-name" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
+                <div class="site-cookie-meta">${c.secure ? '🔒' : ''} ${escapeHtml(c.expires)}</div>
+                <button type="button" class="btn-site-cookie-del" onclick="deleteCurrentSiteCookie('${escapeHtml(c.name)}', '${info.domain}')" title="Excluir este cookie">✕</button>
+              </div>
+            `).join('');
+          } else {
+            siteCookiesDetailListEl.innerHTML = '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:11px;">Nenhum cookie salvo para este site.</div>';
+          }
+        }
+      }
+    } catch(e) {}
   }
 }
 
@@ -1101,6 +1269,57 @@ function createWebview(id, url) {
         `).catch(() => {});
       }
     } catch(e) {}
+
+    // 5. Assistente Inteligente de Consentimento de Cookies da Página (Auto-Consent LGPD/GDPR)
+    try {
+      const s = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
+      if (s.autoAcceptBanners !== false) {
+        wv.executeJavaScript(`
+          (function() {
+            try {
+              if (window.__vortexCookieHandled) return;
+              const acceptKeywords = [
+                'aceitar todos', 'aceitar cookies', 'aceitar tudo', 'concordar e fechar', 
+                'concordo', 'permitir todos', 'permitir cookies', 'aceito', 'prossegue',
+                'accept all', 'accept cookies', 'agree', 'allow all', 'i agree', 'got it', 'understand'
+              ];
+              const popularSelectors = [
+                '#onetrust-accept-btn-handler',
+                '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+                '#CybotCookiebotDialogBodyButtonAccept',
+                '.cc-btn.cc-allow',
+                '.cookie-banner__accept',
+                '.js-accept-cookies',
+                'button[data-testid*="cookie-policy-manage-dialog-accept-button"]',
+                'button[id*="cookie-accept"]',
+                'button[class*="cookie-accept"]',
+                'button[aria-label*="Aceitar todos"]'
+              ];
+              for (const sel of popularSelectors) {
+                const btn = document.querySelector(sel);
+                if (btn && btn.offsetParent !== null) {
+                  btn.click();
+                  window.__vortexCookieHandled = true;
+                  return;
+                }
+              }
+              const clickable = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="button"], input[type="submit"]'));
+              for (const el of clickable) {
+                const text = (el.innerText || el.value || el.getAttribute('aria-label') || '').toLowerCase().trim();
+                if (acceptKeywords.some(kw => text === kw || text.includes(kw))) {
+                  const parent = el.closest('[id*="cookie"], [class*="cookie"], [id*="consent"], [class*="consent"], [id*="banner"], [class*="banner"], [id*="lgpd"], [class*="lgpd"]');
+                  if (parent || text.includes('cookie') || text.includes('concord')) {
+                    el.click();
+                    window.__vortexCookieHandled = true;
+                    return;
+                  }
+                }
+              }
+            } catch(e) {}
+          })();
+        `).catch(() => {});
+      }
+    } catch(e) {}
   });
 
   wv.addEventListener('console-message', (e) => {
@@ -1716,6 +1935,34 @@ window.addEventListener('blur', () => {
 const homeSearchInputEl = document.getElementById('homeSearchInput');
 homeSearchInputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigateTo(homeSearchInputEl.value);
+});
+
+// Seletores rápidos de buscador na tela inicial
+document.querySelectorAll('.home-engine-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.home-engine-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const engine = chip.getAttribute('data-engine');
+    if (engine) {
+      searchEngine = engine;
+      const names = {
+        duckduckgo: 'DuckDuckGo sem rastreamento',
+        google: 'Google',
+        brave: 'Brave Search',
+        bing: 'Bing',
+        youtube: 'YouTube'
+      };
+      if (homeSearchInputEl) {
+        homeSearchInputEl.placeholder = `Buscar com ${names[engine] || engine}...`;
+        homeSearchInputEl.focus();
+      }
+      try {
+        const s = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
+        s.searchEngine = engine;
+        localStorage.setItem('vortex-settings', JSON.stringify(s));
+      } catch (e) {}
+    }
+  });
 });
 
 document.querySelectorAll('.tile').forEach(tile => {

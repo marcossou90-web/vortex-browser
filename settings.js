@@ -31,6 +31,11 @@ function loadSettings() {
   if (document.getElementById('translatePages')) document.getElementById('translatePages').checked = s.translate !== false;
   if (document.getElementById('uiAnimations')) document.getElementById('uiAnimations').checked = s.animations !== false;
   if (document.getElementById('highContrast')) document.getElementById('highContrast').checked = !!s.highContrast;
+
+  // Preferências de Cookies & Consentimento
+  if (document.getElementById('cookiePolicySelect')) document.getElementById('cookiePolicySelect').value = s.cookiePolicy || 'block_third_party';
+  if (document.getElementById('autoAcceptBannersToggle')) document.getElementById('autoAcceptBannersToggle').checked = s.autoAcceptBanners !== false;
+  if (document.getElementById('clearCookiesOnExitToggle')) document.getElementById('clearCookiesOnExitToggle').checked = !!s.clearCookiesOnExit;
 }
 
 // Salva configurações no localStorage e notifica o renderer
@@ -55,8 +60,22 @@ function saveSettings() {
     translate: document.getElementById('translatePages')?.checked,
     animations: document.getElementById('uiAnimations')?.checked,
     highContrast: document.getElementById('highContrast')?.checked,
+    cookiePolicy: document.getElementById('cookiePolicySelect')?.value || 'block_third_party',
+    autoAcceptBanners: document.getElementById('autoAcceptBannersToggle')?.checked !== false,
+    clearCookiesOnExit: !!document.getElementById('clearCookiesOnExitToggle')?.checked,
   };
   localStorage.setItem('vortex-settings', JSON.stringify(s));
+
+  // Sincroniza política de cookies com o processo principal via IPC
+  const api = window.vortexAPI || window.parent?.vortexAPI;
+  if (api && api.setCookieSettings) {
+    api.setCookieSettings({
+      policy: s.cookiePolicy,
+      autoAcceptBanners: s.autoAcceptBanners,
+      clearOnExit: s.clearCookiesOnExit
+    });
+  }
+
   // Notifica o renderer pai (iframe parent) sobre as mudanças em tempo real
   try {
     window.parent.postMessage({ type: 'settings-updated', settings: s }, '*');
@@ -74,6 +93,9 @@ function switchSection(section) {
   if (nav) nav.classList.add('active');
   const sec = document.getElementById('section-' + section);
   if (sec) sec.classList.add('active');
+  if (section === 'cookies') {
+    loadStoredCookies();
+  }
 }
 
 // Navegação entre seções
@@ -612,6 +634,151 @@ document.getElementById('btnCheckUpdateSettings')?.addEventListener('click', asy
   } catch (err) {
     if (btn) btn.disabled = false;
     if (desc) desc.textContent = 'Não foi possível verificar no momento (offline ou servidor indisponível).';
+  }
+});
+
+// ── Utilitário de Escape HTML ─────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ── Módulo de Gerenciamento de Cookies no Settings ───────
+let storedCookiesList = [];
+
+async function loadStoredCookies() {
+  const container = document.getElementById('cookiesListContainer');
+  const countBadge = document.getElementById('cookiesCountBadge');
+  if (!container) return;
+  
+  const api = window.vortexAPI || window.parent?.vortexAPI;
+  if (!api || !api.getCookies) {
+    container.innerHTML = '<div class="cookies-empty-state">Gerenciamento de cookies ativo via sessão segura do Vortex Browser.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="cookies-empty-state">Carregando cookies da sessão atual...</div>';
+  try {
+    const res = await api.getCookies({});
+    if (res && res.success && Array.isArray(res.cookies)) {
+      storedCookiesList = res.cookies;
+      renderCookiesList();
+    } else {
+      container.innerHTML = '<div class="cookies-empty-state">Nenhum cookie armazenado no momento.</div>';
+      if (countBadge) countBadge.textContent = '0';
+    }
+  } catch (err) {
+    container.innerHTML = `<div class="cookies-empty-state">Erro ao carregar cookies: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderCookiesList(filterText = '') {
+  const container = document.getElementById('cookiesListContainer');
+  const countBadge = document.getElementById('cookiesCountBadge');
+  if (!container) return;
+
+  const filter = (filterText || document.getElementById('cookiesSearchInput')?.value || '').toLowerCase().trim();
+
+  // Agrupa cookies por domínio
+  const groups = {};
+  for (const c of storedCookiesList) {
+    const domain = (c.domain || 'desconhecido').startsWith('.') ? c.domain.substring(1) : (c.domain || 'desconhecido');
+    if (filter && !domain.toLowerCase().includes(filter) && !c.name.toLowerCase().includes(filter)) {
+      continue;
+    }
+    if (!groups[domain]) groups[domain] = [];
+    groups[domain].push(c);
+  }
+
+  const domains = Object.keys(groups).sort();
+  if (countBadge) countBadge.textContent = storedCookiesList.length;
+
+  if (domains.length === 0) {
+    container.innerHTML = filter 
+      ? '<div class="cookies-empty-state">Nenhum cookie corresponde à sua pesquisa.</div>'
+      : '<div class="cookies-empty-state">Nenhum cookie salvo no armazenamento do navegador.</div>';
+    return;
+  }
+
+  container.innerHTML = domains.map(domain => {
+    const cookies = groups[domain];
+    const safeDomainId = domain.replace(/[^a-zA-Z0-9]/g, '_');
+    return `
+      <div class="cookie-domain-card" data-domain="${escapeHtml(domain)}">
+        <div class="cookie-domain-header">
+          <div class="cookie-domain-info">
+            <span class="cookie-domain-icon">🌐</span>
+            <div class="cookie-domain-title">${escapeHtml(domain)}</div>
+            <span class="cookie-domain-count">${cookies.length} cookie${cookies.length > 1 ? 's' : ''}</span>
+          </div>
+          <div class="cookie-domain-actions">
+            <button type="button" class="btn-cookie-toggle" onclick="toggleDomainCookies('${safeDomainId}')" title="Ver detalhes dos cookies">Detalhes ▼</button>
+            <button type="button" class="btn-cookie-del-domain" onclick="deleteDomainCookies('${escapeHtml(domain)}')" title="Excluir todos os cookies deste site">🗑️ Excluir</button>
+          </div>
+        </div>
+        <div class="cookie-items-list hidden" id="domain-cookies-${safeDomainId}">
+          ${cookies.map(c => `
+            <div class="cookie-item-row">
+              <div class="cookie-item-details">
+                <div class="cookie-item-name">
+                  <strong>${escapeHtml(c.name)}</strong>
+                  ${c.secure ? '<span class="cookie-secure-tag">🔒 Seguro</span>' : ''}
+                  ${c.httpOnly ? '<span class="cookie-httponly-tag">HttpOnly</span>' : ''}
+                </div>
+                <div class="cookie-item-val" title="${escapeHtml(c.value || '')}">Valor: ${escapeHtml(c.value ? (c.value.length > 60 ? c.value.substring(0, 60) + '...' : c.value) : '(vazio)')}</div>
+                <div class="cookie-item-meta">Caminho: ${escapeHtml(c.path || '/')} • Expiração: ${c.expirationDate ? new Date(c.expirationDate * 1000).toLocaleDateString('pt-BR') : 'Sessão'}</div>
+              </div>
+              <button type="button" class="btn-cookie-del-single" onclick="deleteSingleCookie('${c.secure ? 'https' : 'http'}://${domain}${c.path || '/'}', '${escapeHtml(c.name)}', '${escapeHtml(domain)}')" title="Remover este cookie">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.toggleDomainCookies = function(safeDomainId) {
+  const el = document.getElementById('domain-cookies-' + safeDomainId);
+  if (el) {
+    el.classList.toggle('hidden');
+  }
+};
+
+window.deleteDomainCookies = async function(domain) {
+  if (!confirm(`Deseja remover todos os cookies salvos de "${domain}"?`)) return;
+  const api = window.vortexAPI || window.parent?.vortexAPI;
+  if (api && api.clearCookiesDomain) {
+    await api.clearCookiesDomain(domain);
+    await loadStoredCookies();
+  }
+};
+
+window.deleteSingleCookie = async function(url, name, domain) {
+  const api = window.vortexAPI || window.parent?.vortexAPI;
+  if (api && api.deleteCookie) {
+    await api.deleteCookie({ url, name });
+    await loadStoredCookies();
+  }
+};
+
+// Listener de busca de cookies
+document.getElementById('cookiesSearchInput')?.addEventListener('input', (e) => {
+  renderCookiesList(e.target.value);
+});
+
+// Botão excluir todos os cookies
+document.getElementById('btnClearAllCookiesBtn')?.addEventListener('click', async () => {
+  if (!confirm('Atenção: Isso excluirá TODOS os cookies e sessões ativas de sites. Deseja continuar?')) return;
+  const api = window.vortexAPI || window.parent?.vortexAPI;
+  if (api && api.clearAllCookies) {
+    await api.clearAllCookies();
+    await loadStoredCookies();
+    alert('Todos os cookies foram removidos com sucesso!');
   }
 });
 

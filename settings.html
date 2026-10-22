@@ -41,6 +41,16 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Privacidade e Seguranca
         </a>
+        <a class="nav-item" data-section="cookies" href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+            <circle cx="15" cy="8" r="1.2" fill="currentColor"/>
+            <circle cx="10" cy="15" r="1.5" fill="currentColor"/>
+            <circle cx="15" cy="14" r="1.2" fill="currentColor"/>
+          </svg>
+          Cookies & Consentimento
+        </a>
         <a class="nav-item" data-section="search" href="#">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Motor de Busca
@@ -124,6 +134,78 @@
         <div class="setting-card">
           <div class="setting-info"><div class="setting-label">Limpar dados de navegacao agora</div><div class="setting-desc">Cookies, cache, historico e armazenamento local</div></div>
           <div class="setting-control"><button class="btn-setting-action" id="btnClearNow">Limpar Agora</button></div>
+        </div>
+      </section>
+      <section id="section-cookies" class="settings-section">
+        <h2 class="section-title">🍪 Cookies & Consentimento</h2>
+        <div class="setting-desc-hero">
+          Gerencie cookies de sites, configure aceitação automática de avisos da LGPD/GDPR e tenha controle total dos dados armazenados no seu computador.
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="cookiePolicySelect" class="setting-label">Política Geral de Cookies</label>
+            <div class="setting-desc">Define como o Vortex Browser lida com cookies de páginas e rastreadores</div>
+          </div>
+          <div class="setting-control">
+            <select id="cookiePolicySelect" class="setting-select" title="Política de Cookies" aria-label="Política de Cookies">
+              <option value="allow_all">🟢 Permitir todos os cookies</option>
+              <option value="block_third_party" selected>🛡️ Bloquear cookies de terceiros (Recomendado)</option>
+              <option value="block_all">🚫 Bloquear todos os cookies (Ultra-restritivo)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="autoAcceptBannersToggle" class="setting-label">Assistente de Aceitar Cookies (Auto-Consent)</label>
+            <div class="setting-desc">Aceita ou dispensa automaticamente banners de cookies em páginas para navegar sem janelas cobrindo a tela</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="autoAcceptBannersToggle" checked title="Auto-aceitar banners de cookies" aria-label="Auto-aceitar banners de cookies">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-info">
+            <label for="clearCookiesOnExitToggle" class="setting-label">Limpar cookies ao fechar o navegador</label>
+            <div class="setting-desc">Remove automaticamente os cookies de sites toda vez que o Vortex for encerrado</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" id="clearCookiesOnExitToggle" title="Limpar cookies ao fechar" aria-label="Limpar cookies ao fechar">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Seção de Gerenciador Interativo de Cookies Armazenados -->
+        <div class="cookies-storage-section">
+          <div class="cookies-toolbar">
+            <div class="cookies-title-group">
+              <h3 class="cookies-heading">
+                <span>📁</span> Cookies e Dados Armazenados por Sites
+                <span id="cookiesCountBadge" class="downloads-count-badge">0</span>
+              </h3>
+              <div class="cookies-subtext">Veja e remova cookies específicos salvos no seu computador</div>
+            </div>
+            <div class="cookies-actions">
+              <button class="btn-setting-action btn-danger-action" id="btnClearAllCookiesBtn">
+                <span>🗑️</span> Excluir Todos os Cookies
+              </button>
+            </div>
+          </div>
+
+          <div class="cookies-search-box">
+            <input type="text" id="cookiesSearchInput" placeholder="🔍 Pesquisar cookies por site (ex: google.com, github.com)..." class="setting-input cookies-search-input" />
+          </div>
+
+          <div id="cookiesListContainer" class="cookies-list-container">
+            <div class="cookies-empty-state">Carregando lista de cookies...</div>
+          </div>
         </div>
       </section>
       <section id="section-search" class="settings-section">
