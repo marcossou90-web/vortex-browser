@@ -174,15 +174,151 @@ document.getElementById('btnCloseSecurityModal').addEventListener('click', () =>
   securityModalEl.style.display = 'none'; 
 });
 
-// Botão badge de cookies no Omnibar
-if (btnCookieBadgeEl) {
-  btnCookieBadgeEl.addEventListener('click', () => {
-    securityModalEl.style.display = 'flex';
-    if (siteCookiesDetailListEl) siteCookiesDetailListEl.classList.remove('hidden');
+// ── Popup de Permissão estilo Google Chrome ─────────────
+const permissionPromptPopup = document.getElementById('permissionPromptPopup');
+const permissionPromptIcon = document.getElementById('permissionPromptIcon');
+const permissionPromptDomain = document.getElementById('permissionPromptDomain');
+const permissionPromptDesc = document.getElementById('permissionPromptDesc');
+const btnPermissionBlock = document.getElementById('btnPermissionBlock');
+const btnPermissionAllow = document.getElementById('btnPermissionAllow');
+let currentPermissionRequestId = null;
+
+const PERMISSION_TRANSLATIONS = {
+  geolocation: { icon: '📍', text: 'deseja saber a sua localização' },
+  notifications: { icon: '🔔', text: 'deseja exibir notificações' },
+  media: { icon: '🎥', text: 'deseja usar a sua câmera e microfone' },
+  midi: { icon: '🎹', text: 'deseja acessar dispositivos MIDI' },
+  pointerLock: { icon: '🖱️', text: 'deseja bloquear o ponteiro do mouse' },
+  'clipboard-read': { icon: '📋', text: 'deseja ver texto e imagens da área de transferência' },
+  'clipboard-sanitized-write': { icon: '📋', text: 'deseja copiar dados para a área de transferência' }
+};
+
+if (window.vortexAPI && window.vortexAPI.onPermissionRequested) {
+  window.vortexAPI.onPermissionRequested((data) => {
+    if (!data) return;
+    currentPermissionRequestId = data.requestId;
+    let domainStr = data.origin || '';
+    try {
+      if (domainStr) domainStr = new URL(domainStr).hostname;
+    } catch(e) {}
+
+    const permConfig = PERMISSION_TRANSLATIONS[data.permission] || { icon: '🔒', text: `solicitou autorização para ${data.permission}` };
+
+    if (permissionPromptDomain) permissionPromptDomain.innerText = domainStr || 'Este site';
+    if (permissionPromptDesc) permissionPromptDesc.innerText = permConfig.text;
+    if (permissionPromptIcon) permissionPromptIcon.innerText = permConfig.icon;
+    if (permissionPromptPopup) permissionPromptPopup.classList.add('open');
   });
 }
 
-// Alternar detalhes dos cookies no modal
+function respondCurrentPermission(allow) {
+  if (currentPermissionRequestId !== null && window.vortexAPI?.respondPermission) {
+    window.vortexAPI.respondPermission(currentPermissionRequestId, allow);
+    currentPermissionRequestId = null;
+  }
+  if (permissionPromptPopup) permissionPromptPopup.classList.remove('open');
+}
+
+btnPermissionBlock?.addEventListener('click', () => respondCurrentPermission(false));
+btnPermissionAllow?.addEventListener('click', () => respondCurrentPermission(true));
+
+// ── Modal de Limpar Histórico e Cookies estilo Google Chrome ────────
+const chromeClearDataModal = document.getElementById('chromeClearDataModal');
+const btnCloseChromeClearModal = document.getElementById('btnCloseChromeClearModal');
+const btnCancelChromeClear = document.getElementById('btnCancelChromeClear');
+const btnConfirmChromeClear = document.getElementById('btnConfirmChromeClear');
+let selectedClearTimeframe = '24h';
+
+document.querySelectorAll('.chrome-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chrome-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    selectedClearTimeframe = chip.getAttribute('data-time') || '24h';
+  });
+});
+
+function openChromeClearModal() {
+  if (!chromeClearDataModal) return;
+  // Atualiza perfil no modal
+  try {
+    const profile = JSON.parse(localStorage.getItem('vortex-profile-cache') || '{}');
+    const uName = document.getElementById('clearModalUserName');
+    const uEmail = document.getElementById('clearModalUserEmail');
+    const uAvatar = document.getElementById('clearModalAvatar');
+    if (uName) uName.innerText = profile.name || 'Usuário Vortex';
+    if (uEmail) uEmail.innerText = profile.email || 'Conta local';
+    if (uAvatar && profile.photoUrl) {
+      uAvatar.innerHTML = `<img src="${profile.photoUrl}" alt="Avatar">`;
+    }
+  } catch(e) {}
+
+  // Atualiza contadores descritivos
+  const histDesc = document.getElementById('clearHistoryCountDesc');
+  if (histDesc) histDesc.innerText = `${browsingHistory.length} iten${browsingHistory.length !== 1 ? 's' : ''} no histórico`;
+
+  chromeClearDataModal.style.display = 'flex';
+}
+
+function closeChromeClearModal() {
+  if (chromeClearDataModal) chromeClearDataModal.style.display = 'none';
+}
+
+btnCloseChromeClearModal?.addEventListener('click', closeChromeClearModal);
+btnCancelChromeClear?.addEventListener('click', closeChromeClearModal);
+
+btnConfirmChromeClear?.addEventListener('click', async () => {
+  const clearHist = !!document.getElementById('chkClearHistory')?.checked;
+  const clearCook = !!document.getElementById('chkClearCookies')?.checked;
+  const clearCach = !!document.getElementById('chkClearCache')?.checked;
+  const clearDown = !!document.getElementById('chkClearDownloads')?.checked;
+  const clearForm = !!document.getElementById('chkClearFormData')?.checked;
+
+  const now = Date.now();
+  let timeLimitMs = 0;
+  if (selectedClearTimeframe === '15m') timeLimitMs = 15 * 60 * 1000;
+  else if (selectedClearTimeframe === '1h') timeLimitMs = 60 * 60 * 1000;
+  else if (selectedClearTimeframe === '24h') timeLimitMs = 24 * 60 * 60 * 1000;
+  else if (selectedClearTimeframe === '7d') timeLimitMs = 7 * 24 * 60 * 60 * 1000;
+  else timeLimitMs = Infinity;
+
+  // 1. Limpa histórico filtrado por período
+  if (clearHist) {
+    if (timeLimitMs === Infinity) {
+      browsingHistory = [];
+    } else {
+      browsingHistory = browsingHistory.filter(item => {
+        const itemTime = item.time ? new Date(item.time).getTime() : 0;
+        return (now - itemTime) > timeLimitMs;
+      });
+    }
+    localStorage.setItem('vortex-history', JSON.stringify(browsingHistory));
+    const histTab = tabs.find(t => t.isHistory);
+    if (histTab && histTab.webview) renderHistoryPage(histTab.webview);
+  }
+
+  // 2. Limpa cookies se selecionado
+  if (clearCook) {
+    if (window.vortexAPI?.clearAllCookies) {
+      await window.vortexAPI.clearAllCookies();
+    }
+  }
+
+  // 3. Limpa cache e dados de sessão
+  if (clearCach || clearForm) {
+    if (window.vortexAPI?.clearBrowsingData) {
+      window.vortexAPI.clearBrowsingData();
+    }
+  }
+
+  // 4. Limpa histórico de downloads
+  if (clearDown) {
+    localStorage.removeItem('vortex-downloads');
+    notifySettingsDownloadsUpdated([]);
+  }
+
+  closeChromeClearModal();
+  showToastNotification('🗑️', 'Dados excluídos', 'Os dados de navegação selecionados foram removidos com sucesso.');
+});
 if (btnToggleSiteCookiesDetail) {
   btnToggleSiteCookiesDetail.addEventListener('click', () => {
     if (siteCookiesDetailListEl) siteCookiesDetailListEl.classList.toggle('hidden');
@@ -2364,10 +2500,7 @@ document.getElementById('dm-extensions')?.addEventListener('click', () => { clos
 
 document.getElementById('dm-clear')?.addEventListener('click', () => {
   closeAllMenus();
-  window.vortexAPI.clearBrowsingData();
-  browsingHistory = [];
-  localStorage.removeItem('vortex-history');
-  showToastNotification('🗑️', 'Dados de navegação limpos', 'Histórico, cache e cookies removidos.');
+  openChromeClearModal();
 });
 
 document.getElementById('dm-print')?.addEventListener('click', () => {
@@ -2616,7 +2749,7 @@ function renderHistoryPage(iframe) {
   </style></head><body>
     <h2>🕐 Histórico de Navegação</h2>
     <input class="search-bar" id="hSearch" placeholder="Pesquisar no histórico..." oninput="filterHistory(this.value)">
-    <button class="btn-clear-all" onclick="parent.postMessage({type:'clear-history'},'*')">🗑️ Limpar todo o histórico</button>
+    <button class="btn-clear-all" onclick="parent.postMessage({type:'open-chrome-clear-modal'},'*')">🗑️ Excluir dados de navegação...</button>
     <div id="hContent">${rows}</div>
     <script>
     function filterHistory(q){
@@ -2824,12 +2957,21 @@ window.addEventListener('message', (e) => {
     showToastNotification('🗑️', 'Downloads limpos', 'O histórico de arquivos baixados foi removido.');
   }
   if (data.type === 'clear-browsing-data-request') {
-    window.vortexAPI.clearBrowsingData();
-    browsingHistory = [];
-    localStorage.removeItem('vortex-history');
-    const histTab = tabs.find(t => t.isHistory);
-    if (histTab && histTab.webview) renderHistoryPage(histTab.webview);
-    showToastNotification('🗑️', 'Dados limpos', 'Cache, histórico e cookies foram removidos.');
+    openChromeClearModal();
+  }
+  if (data.type === 'open-chrome-clear-modal') {
+    openChromeClearModal();
+  }
+  if (data.type === 'get-current-page-url-request') {
+    const cur = getActiveTab();
+    let curUrl = '';
+    if (cur && cur.url && !cur.url.startsWith('vortex://') && !cur.url.startsWith('about:')) {
+      curUrl = cur.url;
+    }
+    const settingsTab = tabs.find(t => t.isSettings && t.webview);
+    if (settingsTab && settingsTab.webview && settingsTab.webview.contentWindow) {
+      settingsTab.webview.contentWindow.postMessage({ type: 'current-page-url-response', url: curUrl }, '*');
+    }
   }
 });
 
@@ -3280,8 +3422,42 @@ window.addEventListener('message', async (event) => {
   }
 });
 
-// ── Inicia com a primeira aba ─────────────
-createTab();
+// ── Inicia com a primeira aba ou sessão personalizada ─────────────
+(function initStartupSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
+    if (s.startup === 'lastSession') {
+      const savedUrls = JSON.parse(localStorage.getItem('vortex-last-session-urls') || '[]');
+      if (savedUrls && savedUrls.length > 0) {
+        savedUrls.forEach(url => createTab(url));
+        return;
+      }
+    } else if (s.startup === 'customUrl' && s.homePage && s.homePage.trim()) {
+      createTab(s.homePage.trim());
+      return;
+    } else if (s.homePage && s.homePage.trim() && s.startup !== 'newtab' && s.startup !== 'home') {
+      createTab(s.homePage.trim());
+      return;
+    }
+  } catch(e) {}
+  createTab();
+})();
+
+// Salva periodicamente as URLs abertas para 'lastSession'
+function persistSessionUrls() {
+  try {
+    const s = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
+    if (s.startup === 'lastSession') {
+      const urls = tabs
+        .filter(t => t.url && !t.url.startsWith('vortex://') && !t.url.startsWith('about:') && !t.isIncognito)
+        .map(t => t.url);
+      localStorage.setItem('vortex-last-session-urls', JSON.stringify(urls));
+    }
+  } catch(e) {}
+}
+
+window.addEventListener('beforeunload', persistSessionUrls);
+setInterval(persistSessionUrls, 10000);
 
 
 

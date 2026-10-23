@@ -220,14 +220,37 @@
         </div>
       </section>
       <section id="section-startup" class="settings-section">
-        <h2 class="section-title">Inicializacao</h2>
+        <h2 class="section-title">Inicialização</h2>
         <div class="setting-card">
-          <div class="setting-info"><label for="startupSelect" class="setting-label">Ao iniciar o Vortex, abrir</label><div class="setting-desc">Define o que abre quando o navegador iniciar</div></div>
-          <div class="setting-control"><select id="startupSelect" class="setting-select" title="Ao iniciar o Vortex, abrir" aria-label="Aba de inicializacao"><option value="home" selected>Pagina inicial Vortex (Speed Dial)</option><option value="newtab">Nova aba em branco</option><option value="lastSession">Continuar de onde parei</option></select></div>
+          <div class="setting-info">
+            <label for="startupSelect" class="setting-label">Ao iniciar o Vortex, abrir</label>
+            <div class="setting-desc">Define o que abre quando o navegador iniciar</div>
+          </div>
+          <div class="setting-control">
+            <select id="startupSelect" class="setting-select" title="Ao iniciar o Vortex, abrir" aria-label="Aba de inicialização">
+              <option value="home" selected>Página inicial Vortex (Speed Dial)</option>
+              <option value="newtab">Nova aba em branco</option>
+              <option value="lastSession">Continuar de onde parei</option>
+              <option value="customUrl">Abrir uma página ou conjunto de páginas específicas</option>
+            </select>
+          </div>
         </div>
+
+        <!-- Linha da Página Inicial / URL de Abertura Inicial com Salvar -->
         <div class="setting-card">
-          <div class="setting-info"><label for="homePageInput" class="setting-label">Pagina inicial personalizada</label><div class="setting-desc">URL exibida ao clicar no botao Home</div></div>
-          <div class="setting-control"><input type="text" class="setting-input" id="homePageInput" title="Pagina inicial personalizada" aria-label="URL da pagina inicial" placeholder="https://duckduckgo.com" /></div>
+          <div class="setting-info">
+            <label for="homePageInput" class="setting-label">Página inicial personalizada & Inicialização</label>
+            <div class="setting-desc">URL que abrirá ao iniciar o navegador (se selecionado acima) e ao clicar no botão Home</div>
+          </div>
+          <div class="setting-control startup-custom-control">
+            <input type="text" class="setting-input startup-input" id="homePageInput" title="Página inicial personalizada" aria-label="URL da página inicial" placeholder="https://google.com" />
+            <button type="button" class="btn-setting-action btn-save-startup" id="btnSaveHomePage">
+              <span>💾</span> Salvar
+            </button>
+            <button type="button" class="btn-setting-action btn-current-page" id="btnUseCurrentPage" title="Usar a página que está aberta no momento">
+              <span>🌐</span> Usar página atual
+            </button>
+          </div>
         </div>
       </section>
       <section id="section-downloads" class="settings-section">

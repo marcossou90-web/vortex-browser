@@ -478,6 +478,28 @@ option { background: var(--bg-panel); color: var(--text-main); }
   padding: 7px 14px;
   font-size: 12.5px;
 }
+.startup-custom-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.startup-input {
+  min-width: 260px;
+  flex: 1;
+}
+.btn-save-startup {
+  background: #8ab4f8 !important;
+  color: #202124 !important;
+  font-weight: 700 !important;
+  border: none !important;
+}
+.btn-save-startup:hover {
+  background: #aecbfa !important;
+}
+.btn-current-page {
+  white-space: nowrap;
+}
 .btn-downloads-clear {
   display: flex;
   align-items: center;

@@ -422,20 +422,70 @@ function initDefaultSession() {
 
   const defaultSession = session.defaultSession;
   
-  // Bloquear o Chromium de delegar protocolos e downloads para o navegador externo (Edge)
-  defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+  // Gerenciamento Inteligente de Permissões (Estilo Google Chrome)
+  const pendingPermissionRequests = new Map();
+  let permReqIdCounter = 0;
+
+  defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     if (permission === 'openExternal') {
       callback(false);
       return;
     }
-    callback(true);
+
+    // Permissões comuns que o usuário deve autorizar igual ao Chrome
+    const promptPermissions = ['geolocation', 'notifications', 'media', 'midi', 'pointerLock', 'clipboard-read', 'clipboard-sanitized-write'];
+    
+    // Identificar a URL de origem da requisição
+    let origin = '';
+    try {
+      origin = details && details.requestingUrl ? new URL(details.requestingUrl).origin : (webContents.getURL() ? new URL(webContents.getURL()).origin : '');
+    } catch(e) {
+      origin = webContents.getURL() || '';
+    }
+
+    // Se não for uma permissão sensível ou for página interna, libera diretamente
+    if (!promptPermissions.includes(permission) || origin.startsWith('vortex://') || origin.startsWith('about:')) {
+      callback(true);
+      return;
+    }
+
+    permReqIdCounter++;
+    const reqId = permReqIdCounter;
+    pendingPermissionRequests.set(reqId, callback);
+
+    // Envia solicitação de permissão para a janela do Vortex
+    broadcastToWindows('permission-requested', {
+      requestId: reqId,
+      permission,
+      origin,
+      url: details?.requestingUrl || webContents.getURL() || ''
+    });
+
+    // Timeout de segurança: se o usuário não responder em 30 segundos, não trava a requisição
+    setTimeout(() => {
+      if (pendingPermissionRequests.has(reqId)) {
+        const cb = pendingPermissionRequests.get(reqId);
+        pendingPermissionRequests.delete(reqId);
+        try { cb(false); } catch(e) {}
+      }
+    }, 30000);
   });
 
-  defaultSession.setPermissionCheckHandler((webContents, permission) => {
+  defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
     if (permission === 'openExternal') {
       return false;
     }
     return true;
+  });
+
+  ipcMain.on('permission-response', (event, { requestId, allow }) => {
+    if (pendingPermissionRequests.has(requestId)) {
+      const cb = pendingPermissionRequests.get(requestId);
+      pendingPermissionRequests.delete(requestId);
+      try {
+        cb(!!allow);
+      } catch (e) {}
+    }
   });
 
   // Bloquear rastreadores e anúncios

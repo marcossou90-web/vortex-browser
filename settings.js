@@ -112,14 +112,50 @@ document.querySelectorAll('input, select').forEach(el => {
   el.addEventListener('change', saveSettings);
 });
 
-// Botão limpar dados (limpa histórico, cache de sessão, cookies via renderer/IPC)
-document.getElementById('btnClearNow')?.addEventListener('click', () => {
-  const confirmed = confirm('Tem certeza que deseja limpar dados de navegação (histórico, cookies e cache)?');
-  if (!confirmed) return;
+// Botão Salvar Página Inicial com feedback visual
+document.getElementById('btnSaveHomePage')?.addEventListener('click', () => {
+  saveSettings();
+  const btn = document.getElementById('btnSaveHomePage');
+  if (btn) {
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '<span>✓</span> Salvo!';
+    btn.style.background = '#22c55e';
+    setTimeout(() => {
+      btn.innerHTML = oldText;
+      btn.style.background = '';
+    }, 1500);
+  }
+});
+
+// Botão Usar Página Atual
+document.getElementById('btnUseCurrentPage')?.addEventListener('click', () => {
   try {
+    window.parent.postMessage({ type: 'get-current-page-url-request' }, '*');
+  } catch(e) {}
+});
+
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'current-page-url-response') {
+    const input = document.getElementById('homePageInput');
+    if (input && e.data.url) {
+      input.value = e.data.url;
+      saveSettings();
+      const btn = document.getElementById('btnSaveHomePage');
+      if (btn) {
+        btn.innerHTML = '<span>✓</span> Salvo!';
+        setTimeout(() => { btn.innerHTML = '<span>💾</span> Salvar'; }, 1500);
+      }
+    }
+  }
+});
+
+// Botão limpar dados (abre o modal estilo Chrome ou envia solicitação)
+document.getElementById('btnClearNow')?.addEventListener('click', () => {
+  try {
+    window.parent.postMessage({ type: 'open-chrome-clear-modal' }, '*');
+  } catch (e) {
     window.parent.postMessage({ type: 'clear-browsing-data-request' }, '*');
-  } catch (e) {}
-  alert('Solicitação de limpeza enviada com sucesso!');
+  }
 });
 
 // ── Módulo de Senhas Salvas e Sincronização por E-mail ───────────────

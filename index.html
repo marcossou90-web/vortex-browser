@@ -91,11 +91,6 @@
         <span id="trackerCountBadge">0</span>
       </div>
 
-      <!-- Indicador e Gerenciador de Cookies da Página Atual -->
-      <div class="cookie-badge" id="btnCookieBadge" title="Cookies e Consentimento da Página (Clique para gerenciar)">
-        <span class="cookie-badge-icon">🍪</span>
-        <span class="cookie-badge-count" id="cookieCountBadge">0</span>
-      </div>
       <input type="text" class="address-input" id="addressInput" placeholder="Digite uma URL ou pesquise com foco em privacidade..." autocomplete="off" spellcheck="false" />
 
       <!-- Dropdown de Autocomplete / Sugestões (Omnibox igual Chrome) -->
@@ -736,6 +731,117 @@
         <span class="privacy-badge-status">ATIVO</span>
       </div>
       <button class="btn-danger" id="btnClearData">Limpar Cache & Cookies Agora</button>
+    </div>
+  </div>
+
+  <!-- Popup de Permissão do Site (Igual ao Google Chrome) -->
+  <div class="permission-prompt-popup" id="permissionPromptPopup">
+    <div class="permission-prompt-content">
+      <div class="permission-prompt-header">
+        <span class="permission-prompt-icon" id="permissionPromptIcon">📍</span>
+        <div class="permission-prompt-text-group">
+          <div class="permission-prompt-domain" id="permissionPromptDomain">site.com</div>
+          <div class="permission-prompt-desc" id="permissionPromptDesc">deseja saber a sua localização</div>
+        </div>
+      </div>
+      <div class="permission-prompt-buttons">
+        <button type="button" class="btn-perm-block" id="btnPermissionBlock">Bloquear</button>
+        <button type="button" class="btn-perm-allow" id="btnPermissionAllow">Permitir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Excluir Histórico e Cookies (Idêntico ao Google Chrome) -->
+  <div class="modal-overlay" id="chromeClearDataModal">
+    <div class="modal-content chrome-clear-modal-content">
+      <div class="modal-header chrome-clear-header">
+        <h3 class="modal-title">Excluir dados de navegação</h3>
+        <button class="win-btn" id="btnCloseChromeClearModal">✕</button>
+      </div>
+
+      <div class="chrome-clear-body">
+        <!-- Seleção de período / timeframe estilo Chrome -->
+        <div class="chrome-clear-time-row">
+          <span class="chrome-clear-time-label">Período:</span>
+          <div class="chrome-clear-chips">
+            <button type="button" class="chrome-chip" data-time="15m">Últimos 15 minutos</button>
+            <button type="button" class="chrome-chip" data-time="1h">Última hora</button>
+            <button type="button" class="chrome-chip active" data-time="24h">Últimas 24 horas</button>
+            <button type="button" class="chrome-chip" data-time="7d">Últimos 7 dias</button>
+            <button type="button" class="chrome-chip" data-time="all">Todo o período</button>
+          </div>
+        </div>
+
+        <div class="chrome-clear-options-list">
+          <!-- Item 1: Histórico -->
+          <label class="chrome-option-item">
+            <input type="checkbox" id="chkClearHistory" checked class="chrome-check" />
+            <div class="chrome-option-info">
+              <div class="chrome-option-title">Histórico de navegação</div>
+              <div class="chrome-option-desc" id="clearHistoryCountDesc">Limpa o histórico e preenchimentos da barra de pesquisa em todos os sites</div>
+            </div>
+          </label>
+
+          <!-- Item 2: Cookies e dados do site -->
+          <label class="chrome-option-item">
+            <input type="checkbox" id="chkClearCookies" checked class="chrome-check" />
+            <div class="chrome-option-info">
+              <div class="chrome-option-title">Cookies e outros dados do site</div>
+              <div class="chrome-option-desc" id="clearCookiesCountDesc">Desconecta você da maioria dos sites salvos no navegador</div>
+            </div>
+          </label>
+
+          <!-- Item 3: Cache de imagens e arquivos -->
+          <label class="chrome-option-item">
+            <input type="checkbox" id="chkClearCache" checked class="chrome-check" />
+            <div class="chrome-option-info">
+              <div class="chrome-option-title">Imagens e arquivos em cache</div>
+              <div class="chrome-option-desc">Libera memória e armazenamento em disco temporário</div>
+            </div>
+          </label>
+
+          <!-- Item 4: Histórico de downloads -->
+          <label class="chrome-option-item">
+            <input type="checkbox" id="chkClearDownloads" checked class="chrome-check" />
+            <div class="chrome-option-info">
+              <div class="chrome-option-title">Histórico de downloads</div>
+              <div class="chrome-option-desc" id="clearDownloadsCountDesc">Limpa a lista de arquivos baixados recentemente</div>
+            </div>
+          </label>
+
+          <!-- Item 5: Preenchimento automático de dados de formulário -->
+          <label class="chrome-option-item">
+            <input type="checkbox" id="chkClearFormData" checked class="chrome-check" />
+            <div class="chrome-option-info">
+              <div class="chrome-option-title">Preenchimento automático de formulário</div>
+              <div class="chrome-option-desc">Remove sugestões e campos memorizados</div>
+            </div>
+          </label>
+
+          <!-- Item 6: Configurações de sites e permissões -->
+          <label class="chrome-option-item">
+            <input type="checkbox" id="chkClearSiteSettings" checked class="chrome-check" />
+            <div class="chrome-option-info">
+              <div class="chrome-option-title">Configurações de sites</div>
+              <div class="chrome-option-desc">Redefine autorizações de permissões e preferências</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="chrome-clear-footer">
+        <div class="chrome-clear-profile-info" id="clearModalProfileInfo">
+          <div class="chrome-clear-avatar" id="clearModalAvatar">👤</div>
+          <div class="chrome-clear-account-details">
+            <span class="chrome-clear-username" id="clearModalUserName">Usuário Vortex</span>
+            <span class="chrome-clear-useremail" id="clearModalUserEmail">vortex@local</span>
+          </div>
+        </div>
+        <div class="chrome-clear-buttons">
+          <button type="button" class="btn-cancel" id="btnCancelChromeClear">Cancelar</button>
+          <button type="button" class="btn-primary btn-chrome-clear-confirm" id="btnConfirmChromeClear">Excluir dados</button>
+        </div>
+      </div>
     </div>
   </div>
 

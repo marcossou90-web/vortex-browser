@@ -60,5 +60,8 @@ contextBridge.exposeInMainWorld('vortexAPI', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, info) => callback(info)),
   onUpdateProgress: (callback) => ipcRenderer.on('update-download-progress', (event, progress) => callback(progress)),
-  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info))
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info)),
+  // Sistema de Permissões de Sites (Estilo Google Chrome)
+  onPermissionRequested: (callback) => ipcRenderer.on('permission-requested', (event, data) => callback(data)),
+  respondPermission: (requestId, allow) => ipcRenderer.send('permission-response', { requestId, allow })
 });

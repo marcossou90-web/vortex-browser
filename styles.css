@@ -3396,6 +3396,322 @@ body.incognito-active .address-bar-wrapper {
   color: #94a3b8;
 }
 
+/* ═══════════════════════════════════════════════════════
+   POPUP DE AUTORIZAÇÃO DE PERMISSÕES (IGUAL GOOGLE CHROME)
+   ═══════════════════════════════════════════════════════ */
+.permission-prompt-popup {
+  display: none;
+  position: fixed;
+  top: 78px;
+  left: 210px;
+  background: #28292a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.2);
+  z-index: 10005;
+  width: 340px;
+  padding: 16px 18px;
+  animation: chromePopupFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.permission-prompt-popup.open {
+  display: block;
+}
+
+@keyframes chromePopupFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.permission-prompt-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.permission-prompt-icon {
+  font-size: 22px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.08);
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.permission-prompt-text-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.permission-prompt-domain {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #e8eaed;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.permission-prompt-desc {
+  font-size: 13px;
+  color: #9aa0a6;
+  line-height: 1.4;
+}
+
+.permission-prompt-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-perm-block {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #8ab4f8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-perm-block:hover {
+  background: rgba(138, 180, 248, 0.08);
+  border-color: #8ab4f8;
+}
+
+.btn-perm-allow {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: none;
+  background: #8ab4f8;
+  color: #202124;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-perm-allow:hover {
+  background: #aecbfa;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL DE EXCLUIR HISTÓRICO E COOKIES (IGUAL CHROME)
+   ═══════════════════════════════════════════════════════ */
+.chrome-clear-modal-content {
+  width: 530px;
+  max-width: 95vw;
+  background: #202124;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: chromeModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@keyframes chromeModalFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.chrome-clear-header {
+  padding: 20px 24px 14px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chrome-clear-header .modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8eaed;
+}
+
+.chrome-clear-body {
+  padding: 16px 24px;
+  overflow-y: auto;
+  max-height: 58vh;
+}
+
+.chrome-clear-time-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.chrome-clear-time-label {
+  font-size: 13px;
+  color: #9aa0a6;
+  font-weight: 500;
+}
+
+.chrome-clear-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chrome-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #9aa0a6;
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chrome-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e8eaed;
+}
+
+.chrome-chip.active {
+  background: #8ab4f8;
+  color: #202124;
+  border-color: #8ab4f8;
+  font-weight: 700;
+}
+
+.chrome-clear-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chrome-option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chrome-option-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chrome-check {
+  margin-top: 3px;
+  accent-color: #8ab4f8;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+}
+
+.chrome-option-info {
+  flex: 1;
+}
+
+.chrome-option-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e8eaed;
+  margin-bottom: 2px;
+}
+
+.chrome-option-desc {
+  font-size: 12px;
+  color: #9aa0a6;
+  line-height: 1.4;
+}
+
+.chrome-clear-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #28292a;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chrome-clear-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chrome-clear-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(138, 180, 248, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #8ab4f8;
+  overflow: hidden;
+}
+
+.chrome-clear-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chrome-clear-account-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.chrome-clear-username {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e8eaed;
+}
+
+.chrome-clear-useremail {
+  font-size: 11px;
+  color: #9aa0a6;
+}
+
+.chrome-clear-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-chrome-clear-confirm {
+  background: #8ab4f8 !important;
+  color: #202124 !important;
+  font-weight: 700 !important;
+  padding: 8px 18px !important;
+  border-radius: 20px !important;
+  border: none !important;
+}
+
+.btn-chrome-clear-confirm:hover {
+  background: #aecbfa !important;
+}
+
+
 
 
 
