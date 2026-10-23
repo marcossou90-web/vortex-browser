@@ -1958,6 +1958,14 @@ function renderAutocompleteSuggestions(items, query) {
   });
 }
 
+// Domínios mais populares da Web para autocompletar instantâneo (estilo Google Chrome)
+const POPULAR_DOMAINS = [
+  'google.com', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+  'whatsapp.com', 'tiktok.com', 'netflix.com', 'globo.com', 'uol.com.br', 'g1.globo.com',
+  'mercadolivre.com.br', 'amazon.com.br', 'amazon.com', 'github.com', 'chatgpt.com',
+  'openai.com', 'wikipedia.org', 'reddit.com', 'linkedin.com', 'gov.br', 'datasus.gov.br'
+];
+
 async function updateAutocomplete(query) {
   const q = (query || '').trim();
   if (!q) {
@@ -1969,20 +1977,48 @@ async function updateAutocomplete(query) {
   const suggestions = [];
   const seenTargets = new Set();
 
-  // 1. Verificar se é uma URL direta que o usuário está digitando
+  // 1. Sempre oferecer a opção direta de pesquisar pelo termo digitado
+  suggestions.push({
+    type: 'search',
+    title: q,
+    url: '',
+    target: q
+  });
+  seenTargets.add(q.toLowerCase());
+
+  // 2. Verificar correspondência com os domínios mais populares (ex: "go" -> "google.com")
+  for (const dom of POPULAR_DOMAINS) {
+    if (dom.startsWith(qLower) || dom.includes(qLower)) {
+      const fullUrl = `https://${dom}`;
+      if (!seenTargets.has(fullUrl.toLowerCase())) {
+        seenTargets.add(fullUrl.toLowerCase());
+        suggestions.push({
+          type: 'direct-url',
+          title: dom,
+          url: fullUrl,
+          target: fullUrl
+        });
+        if (suggestions.length >= 4) break;
+      }
+    }
+  }
+
+  // 3. Verificar se o próprio texto é uma URL direta
   const isLikelyUrl = q.includes('.') && !q.includes(' ') && !q.startsWith('http');
   if (isLikelyUrl) {
     const fullUrl = `https://${q}`;
-    suggestions.push({
-      type: 'direct-url',
-      title: q,
-      url: fullUrl,
-      target: fullUrl
-    });
-    seenTargets.add(fullUrl.toLowerCase());
+    if (!seenTargets.has(fullUrl.toLowerCase())) {
+      seenTargets.add(fullUrl.toLowerCase());
+      suggestions.push({
+        type: 'direct-url',
+        title: q,
+        url: fullUrl,
+        target: fullUrl
+      });
+    }
   }
 
-  // 2. Buscar correspondências no Histórico local de navegação
+  // 4. Buscar correspondências no Histórico local de navegação
   if (Array.isArray(browsingHistory)) {
     for (const h of browsingHistory) {
       if (!h || !h.url) continue;
@@ -1996,12 +2032,12 @@ async function updateAutocomplete(query) {
           url: h.url,
           target: h.url
         });
-        if (suggestions.length >= 5) break;
+        if (suggestions.length >= 7) break;
       }
     }
   }
 
-  // 3. Buscar correspondências nos Favoritos
+  // 5. Buscar correspondências nos Favoritos
   if (Array.isArray(bookmarks)) {
     for (const b of bookmarks) {
       if (!b || !b.url) continue;
@@ -2015,31 +2051,35 @@ async function updateAutocomplete(query) {
           url: b.url,
           target: b.url
         });
-        if (suggestions.length >= 7) break;
+        if (suggestions.length >= 8) break;
       }
     }
   }
 
-  // 4. Buscar sugestões em tempo real do Google Suggest
-  const googleResults = await fetchGoogleSuggestions(q);
-  for (const gQuery of googleResults) {
-    const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(gQuery)}`;
-    if (!seenTargets.has(gQuery.toLowerCase())) {
-      seenTargets.add(gQuery.toLowerCase());
-      suggestions.push({
-        type: 'search',
-        title: gQuery,
-        url: '',
-        target: gQuery
-      });
-      if (suggestions.length >= 8) break;
-    }
-  }
-
-  // Se ainda estiver com o mesmo termo digitado, renderiza
+  // Renderiza imediatamente as sugestões locais instantâneas (sem latência de rede)
   if (addressInputEl && addressInputEl.value.trim() === q) {
     renderAutocompleteSuggestions(suggestions, q);
   }
+
+  // 6. Buscar sugestões em tempo real do Google Suggest de forma assíncrona
+  try {
+    const googleResults = await fetchGoogleSuggestions(q);
+    if (addressInputEl && addressInputEl.value.trim() === q) {
+      for (const gQuery of googleResults) {
+        if (!seenTargets.has(gQuery.toLowerCase())) {
+          seenTargets.add(gQuery.toLowerCase());
+          suggestions.push({
+            type: 'search',
+            title: gQuery,
+            url: '',
+            target: gQuery
+          });
+          if (suggestions.length >= 9) break;
+        }
+      }
+      renderAutocompleteSuggestions(suggestions, q);
+    }
+  } catch (err) {}
 }
 
 // ── Event listeners da barra de endereço e Omnibox ──
@@ -2050,9 +2090,8 @@ addressInputEl.addEventListener('input', () => {
     hideAutocomplete();
     return;
   }
-  autocompleteDebounceTimer = setTimeout(() => {
-    updateAutocomplete(val);
-  }, 100);
+  // Dispara imediatamente para sugestões locais e domínios instantâneos
+  updateAutocomplete(val);
 });
 
 addressInputEl.addEventListener('keydown', (e) => {

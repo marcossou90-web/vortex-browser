@@ -316,6 +316,8 @@ body {
 
 /* Navigation Toolbar */
 .toolbar {
+  position: relative;
+  z-index: 9999;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -394,10 +396,10 @@ body {
   background: var(--bg-panel, #181d28);
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
-  max-height: 380px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+  max-height: 400px;
   overflow-y: auto;
-  z-index: 9999;
+  z-index: 100000;
   display: none;
   padding: 6px 0;
 }

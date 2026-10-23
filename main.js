@@ -20,7 +20,10 @@ app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-quic');
 app.commandLine.appendSwitch('enable-tcp-fast-open');
 app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess,ParallelDownloading,CanvasOopRasterization');
-app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,BlockInsecurePrivateNetworkRequests');
+// Compatibilidade total com portais legados (DATASUS, Governamentais, Intranets, HTTP misto)
+app.commandLine.appendSwitch('allow-running-insecure-content');
+app.commandLine.appendSwitch('ignore-certificate-errors');
 
 const vortexDataDir = path.join(app.getPath('appData'), 'VortexBrowserData');
 try {
@@ -1655,8 +1658,8 @@ function setupAutoUpdater() {
     console.warn('[AutoUpdater] Erro ao configurar FeedURL:', err.message);
   }
 
-  // Download automático em background igual ao Google Chrome (baixa silenciosamente e avisa quando pronto para reiniciar)
-  autoUpdater.autoDownload = true;
+  // Notificação com confirmação do usuário (NÃO baixa automaticamente; aguarda clique do usuário para iniciar o download)
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('checking-for-update', () => {
@@ -1816,6 +1819,14 @@ app.whenReady().then(() => {
       webPreferences.images = true;
       webPreferences.webgl = true;
       webPreferences.spellcheck = false; // Evita overhead de checagem ortográfica durante render pesado de SPAs
+      // Compatibilidade com portais legados (ex: DATASUS, SEFAZ, scripts HTTP em páginas e iframes)
+      webPreferences.allowRunningInsecureContent = true;
+    });
+
+    // Permitir certificados de servidores governamentais / internos sem quebrar a navegação
+    contents.on('certificate-error', (event, url, error, certificate, callback) => {
+      event.preventDefault();
+      callback(true);
     });
 
     // Intercepta window.open ou links com target="_blank"
