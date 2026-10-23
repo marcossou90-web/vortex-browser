@@ -500,6 +500,16 @@ option { background: var(--bg-panel); color: var(--text-main); }
 .btn-current-page {
   white-space: nowrap;
 }
+.history-quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-history-quick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .btn-downloads-clear {
   display: flex;
   align-items: center;
