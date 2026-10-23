@@ -193,10 +193,13 @@ const PERMISSION_TRANSLATIONS = {
   'clipboard-sanitized-write': { icon: '📋', text: 'deseja copiar dados para a área de transferência' }
 };
 
+let currentPermissionData = null;
+
 if (window.vortexAPI && window.vortexAPI.onPermissionRequested) {
   window.vortexAPI.onPermissionRequested((data) => {
     if (!data) return;
     currentPermissionRequestId = data.requestId;
+    currentPermissionData = data;
     let domainStr = data.origin || '';
     try {
       if (domainStr) domainStr = new URL(domainStr).hostname;
@@ -213,8 +216,11 @@ if (window.vortexAPI && window.vortexAPI.onPermissionRequested) {
 
 function respondCurrentPermission(allow) {
   if (currentPermissionRequestId !== null && window.vortexAPI?.respondPermission) {
-    window.vortexAPI.respondPermission(currentPermissionRequestId, allow);
+    const origin = currentPermissionData?.origin || '';
+    const permission = currentPermissionData?.permission || '';
+    window.vortexAPI.respondPermission(currentPermissionRequestId, allow, origin, permission);
     currentPermissionRequestId = null;
+    currentPermissionData = null;
   }
   if (permissionPromptPopup) permissionPromptPopup.classList.remove('open');
 }
@@ -519,17 +525,31 @@ function isDownloadableUrl(url) {
 }
 
 // Interceptar abertura de novas abas via Main Process
+let lastOpenedTabUrl = '';
+let lastOpenedTabTime = 0;
+
 window.vortexAPI.onOpenInNewTab((url) => {
-  if (url) {
-    if (url.startsWith('ftp://')) {
-      window.vortexAPI.downloadFtp(url);
+  if (url && typeof url === 'string') {
+    const cleanUrl = url.trim();
+    if (!cleanUrl || cleanUrl === 'about:blank' || cleanUrl === 'about:blank#') return;
+    
+    // Evita duplicação em cascata de abertura da mesma URL dentro de 1 segundo
+    const now = Date.now();
+    if (cleanUrl === lastOpenedTabUrl && (now - lastOpenedTabTime) < 1000) {
       return;
     }
-    if (isDownloadableUrl(url)) {
-      window.vortexAPI.downloadUrl(url);
+    lastOpenedTabUrl = cleanUrl;
+    lastOpenedTabTime = now;
+
+    if (cleanUrl.startsWith('ftp://')) {
+      window.vortexAPI.downloadFtp(cleanUrl);
       return;
     }
-    createTab(url);
+    if (isDownloadableUrl(cleanUrl)) {
+      window.vortexAPI.downloadUrl(cleanUrl);
+      return;
+    }
+    createTab(cleanUrl);
   }
 });
 
@@ -1118,10 +1138,6 @@ function createTab(initialUrl = null) {
   const tabData = { id, tabEl, webview, url: initialUrl || '', title: initialTitle };
   tabs.push(tabData);
   switchTab(id);
-
-  if (initialUrl && webview) {
-    navigateTo(initialUrl);
-  }
 }
 
 function createWebview(id, url) {
@@ -1267,16 +1283,18 @@ function createWebview(id, url) {
   // Interceptar links com target="_blank" ou window.open
   wv.addEventListener('new-window', (e) => {
     e.preventDefault();
-    if (e.url) {
-      if (e.url.startsWith('ftp://')) {
-        window.vortexAPI.downloadFtp(e.url);
+    if (e.url && typeof e.url === 'string') {
+      const cleanTarget = e.url.trim();
+      if (!cleanTarget || cleanTarget === 'about:blank' || cleanTarget === 'about:blank#') return;
+      if (cleanTarget.startsWith('ftp://')) {
+        window.vortexAPI.downloadFtp(cleanTarget);
         return;
       }
-      if (isDownloadableUrl(e.url)) {
-        window.vortexAPI.downloadUrl(e.url);
+      if (isDownloadableUrl(cleanTarget)) {
+        window.vortexAPI.downloadUrl(cleanTarget);
         return;
       }
-      createTab(e.url);
+      createTab(cleanTarget);
     }
   });
 
@@ -3438,7 +3456,7 @@ window.addEventListener('message', async (event) => {
       const savedUrls = JSON.parse(localStorage.getItem('vortex-last-session-urls') || '[]');
       if (savedUrls && Array.isArray(savedUrls) && savedUrls.length > 0) {
         // Filtra URLs válidas para restaurar
-        const validUrls = savedUrls.filter(u => typeof u === 'string' && u.trim().length > 0);
+        const validUrls = savedUrls.filter(u => typeof u === 'string' && u.trim().length > 0 && !u.startsWith('about:blank'));
         if (validUrls.length > 0) {
           validUrls.forEach(url => createTab(url));
           return;

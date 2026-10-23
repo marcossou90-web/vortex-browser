@@ -60,6 +60,42 @@ function saveCookieSettings(data) {
   }
 }
 
+// ── Permissões de Sites Persistentes (Estilo Google Chrome) ──
+const sitePermissionsFile = path.join(vortexDataDir, 'vortex-site-permissions.json');
+let sitePermissions = {};
+
+try {
+  if (fs.existsSync(sitePermissionsFile)) {
+    const raw = fs.readFileSync(sitePermissionsFile, 'utf8');
+    sitePermissions = JSON.parse(raw);
+  }
+} catch (e) {
+  console.warn('Aviso ao carregar vortex-site-permissions.json:', e.message);
+  sitePermissions = {};
+}
+
+function saveSitePermission(origin, permission, allowed) {
+  try {
+    if (!origin) return;
+    if (!sitePermissions[origin]) {
+      sitePermissions[origin] = {};
+    }
+    sitePermissions[origin][permission] = !!allowed;
+    fs.writeFileSync(sitePermissionsFile, JSON.stringify(sitePermissions, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Erro ao salvar vortex-site-permissions.json:', e);
+  }
+}
+
+function getSitePermission(origin, permission) {
+  try {
+    if (!origin || !sitePermissions[origin]) return undefined;
+    return sitePermissions[origin][permission];
+  } catch (e) {
+    return undefined;
+  }
+}
+
 // ── Gerenciamento de Múltiplas Janelas / Instâncias (Estilo Google Chrome) ──
 // Ao clicar no atalho no desktop com o Vortex já aberto, abre uma NOVA JANELA independente.
 const gotTheLock = app.requestSingleInstanceLock();
@@ -432,9 +468,6 @@ function initDefaultSession() {
       return;
     }
 
-    // Permissões comuns que o usuário deve autorizar igual ao Chrome
-    const promptPermissions = ['geolocation', 'notifications', 'media', 'midi', 'pointerLock', 'clipboard-read', 'clipboard-sanitized-write'];
-    
     // Identificar a URL de origem da requisição
     let origin = '';
     try {
@@ -443,15 +476,31 @@ function initDefaultSession() {
       origin = webContents.getURL() || '';
     }
 
-    // Se não for uma permissão sensível ou for página interna, libera diretamente
-    if (!promptPermissions.includes(permission) || origin.startsWith('vortex://') || origin.startsWith('about:')) {
+    // Se for página interna ou esquema especial, libera diretamente
+    if (origin.startsWith('vortex://') || origin.startsWith('about:') || origin.startsWith('chrome:')) {
       callback(true);
+      return;
+    }
+
+    // Permissões comuns que o usuário deve autorizar igual ao Chrome
+    const promptPermissions = ['geolocation', 'notifications', 'media', 'midi', 'pointerLock', 'clipboard-read', 'clipboard-sanitized-write'];
+
+    if (!promptPermissions.includes(permission)) {
+      callback(true);
+      return;
+    }
+
+    // 1. Verifica se já existe uma decisão persistida para este domínio e permissão
+    const savedDecision = getSitePermission(origin, permission);
+    if (typeof savedDecision === 'boolean') {
+      // Já foi autorizado ou bloqueado anteriormente: aplica sem incomodar o usuário
+      callback(savedDecision);
       return;
     }
 
     permReqIdCounter++;
     const reqId = permReqIdCounter;
-    pendingPermissionRequests.set(reqId, callback);
+    pendingPermissionRequests.set(reqId, { callback, origin, permission });
 
     // Envia solicitação de permissão para a janela do Vortex
     broadcastToWindows('permission-requested', {
@@ -464,9 +513,9 @@ function initDefaultSession() {
     // Timeout de segurança: se o usuário não responder em 30 segundos, não trava a requisição
     setTimeout(() => {
       if (pendingPermissionRequests.has(reqId)) {
-        const cb = pendingPermissionRequests.get(reqId);
+        const item = pendingPermissionRequests.get(reqId);
         pendingPermissionRequests.delete(reqId);
-        try { cb(false); } catch(e) {}
+        try { item.callback(false); } catch(e) {}
       }
     }, 30000);
   });
@@ -475,16 +524,31 @@ function initDefaultSession() {
     if (permission === 'openExternal') {
       return false;
     }
+    // Verifica se há regra persistida para esta permissão
+    const saved = getSitePermission(requestingOrigin, permission);
+    if (typeof saved === 'boolean') {
+      return saved;
+    }
     return true;
   });
 
-  ipcMain.on('permission-response', (event, { requestId, allow }) => {
+  ipcMain.on('permission-response', (event, { requestId, allow, origin, permission }) => {
     if (pendingPermissionRequests.has(requestId)) {
-      const cb = pendingPermissionRequests.get(requestId);
+      const item = pendingPermissionRequests.get(requestId);
       pendingPermissionRequests.delete(requestId);
+      const effOrigin = origin || item.origin;
+      const effPermission = permission || item.permission;
+      
+      // Persiste a decisão do usuário para que NUNCA MAIS peça novamente para este site
+      if (effOrigin && effPermission) {
+        saveSitePermission(effOrigin, effPermission, !!allow);
+      }
+      
       try {
-        cb(!!allow);
+        item.callback(!!allow);
       } catch (e) {}
+    } else if (origin && permission) {
+      saveSitePermission(origin, permission, !!allow);
     }
   });
 
@@ -1759,6 +1823,10 @@ app.whenReady().then(() => {
       // Permitir URLs internas do DevTools
       if (url.startsWith('devtools://') || url.startsWith('chrome-devtools://')) {
         return { action: 'allow' };
+      }
+      // Se for webview ou se a URL for vazia/about:blank, não duplica a abertura via IPC
+      if (!url || url === 'about:blank' || url === 'about:blank#' || contents.getType() === 'webview') {
+        return { action: 'deny' };
       }
       const targetWin = BrowserWindow.fromWebContents(contents) || getActiveWindow();
       if (url.startsWith('ftp://')) {

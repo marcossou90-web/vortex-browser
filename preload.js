@@ -63,5 +63,5 @@ contextBridge.exposeInMainWorld('vortexAPI', {
   onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info)),
   // Sistema de Permissões de Sites (Estilo Google Chrome)
   onPermissionRequested: (callback) => ipcRenderer.on('permission-requested', (event, data) => callback(data)),
-  respondPermission: (requestId, allow) => ipcRenderer.send('permission-response', { requestId, allow })
+  respondPermission: (requestId, allow, origin, permission) => ipcRenderer.send('permission-response', { requestId, allow, origin, permission })
 });
