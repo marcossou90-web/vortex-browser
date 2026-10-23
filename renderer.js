@@ -2292,90 +2292,73 @@ document.getElementById('btnDevtoolsDetach')?.addEventListener('click', async ()
   }
 });
 
-// Abre o DevTools acoplado no canto direito da mesma janela (estilo Chrome/Edge)
+// Abre o DevTools oficial do Chromium com Elements, Console, Network e Sources
 async function openDockedDevTools(targetWv, inspectX, inspectY) {
-  const wv = targetWv || getActiveTab()?.webview;
+  const cur = getActiveTab();
+  const wv = targetWv || cur?.webview;
   if (!wv) return;
 
-  const targetWcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
-
-  // Exibe o painel de DevTools acoplado à direita na janela do Vortex
+  // Garante que o container dummy antigo não fique aberto atrapalhando
   if (devtoolsDockContainerEl) {
-    devtoolsDockContainerEl.classList.add('open');
-  }
-  isDevToolsDockOpen = true;
-  if (targetWcId) devToolsCurrentTargetWcId = targetWcId;
-
-  // Executa abertura imediata do DevTools acoplado ou inspeciona o elemento
-  if (targetWcId && window.vortexAPI?.openDevTools) {
-    try {
-      await window.vortexAPI.openDevTools({
-        targetWebContentsId: targetWcId,
-        mode: 'right',
-        x: inspectX,
-        y: inspectY
-      });
-      return;
-    } catch (e) {
-      console.warn('Erro ao abrir DevTools acoplado via IPC:', e);
-    }
+    devtoolsDockContainerEl.classList.remove('open');
   }
 
-  // Fallback direto no elemento webview
   try {
-    if (typeof inspectX === 'number' && typeof inspectY === 'number' && typeof wv.inspectElement === 'function') {
-      wv.inspectElement(Math.round(inspectX), Math.round(inspectY));
-    } else if (typeof wv.openDevTools === 'function') {
-      wv.openDevTools({ mode: 'right' });
+    const targetWcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
+
+    if (typeof inspectX === 'number' && typeof inspectY === 'number') {
+      const px = Math.max(0, Math.round(inspectX));
+      const py = Math.max(0, Math.round(inspectY));
+      if (typeof wv.inspectElement === 'function') {
+        wv.inspectElement(px, py);
+      } else if (targetWcId && window.vortexAPI?.openDevTools) {
+        await window.vortexAPI.openDevTools({ targetWebContentsId: targetWcId, mode: 'detach', x: px, y: py });
+      }
+    } else {
+      if (typeof wv.openDevTools === 'function') {
+        wv.openDevTools({ mode: 'detach' });
+      } else if (targetWcId && window.vortexAPI?.openDevTools) {
+        await window.vortexAPI.openDevTools({ targetWebContentsId: targetWcId, mode: 'detach' });
+      }
     }
   } catch (err) {
-    console.error('Erro no fallback do DevTools:', err);
+    console.error('Erro ao abrir DevTools nativo:', err);
   }
 }
 
 // Fecha o DevTools
 async function closeDockedDevTools(targetWv) {
-  isDevToolsDockOpen = false;
-
-  // Fecha o painel lateral embutido
   if (devtoolsDockContainerEl) {
     devtoolsDockContainerEl.classList.remove('open');
   }
 
-  const wv = targetWv || getActiveTab()?.webview;
+  const cur = getActiveTab();
+  const wv = targetWv || cur?.webview;
   if (wv) {
-    const wcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
-    if (wcId && window.vortexAPI?.closeDevTools) {
-      try { await window.vortexAPI.closeDevTools({ targetWebContentsId: wcId }); } catch(e) {}
-    }
-    if (typeof wv.closeDevTools === 'function') {
-      try { wv.closeDevTools(); } catch(e) {}
-    }
-  }
-  if (devToolsCurrentTargetWcId && window.vortexAPI?.closeDevTools) {
-    try { await window.vortexAPI.closeDevTools({ targetWebContentsId: devToolsCurrentTargetWcId }); } catch(e) {}
-    devToolsCurrentTargetWcId = null;
+    try {
+      if (typeof wv.closeDevTools === 'function') {
+        wv.closeDevTools();
+      }
+      const wcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
+      if (wcId && window.vortexAPI?.closeDevTools) {
+        await window.vortexAPI.closeDevTools({ targetWebContentsId: wcId });
+      }
+    } catch(e) {}
   }
 }
 
 // Alterna o DevTools (abre se fechado, fecha se aberto)
 async function toggleDockedDevTools(targetWv) {
-  const wv = targetWv || getActiveTab()?.webview;
+  const cur = getActiveTab();
+  const wv = targetWv || cur?.webview;
   if (!wv) return;
 
-  const targetWcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
-  let isOpen = isDevToolsDockOpen || (devtoolsDockContainerEl && devtoolsDockContainerEl.classList.contains('open'));
-
-  if (targetWcId && window.vortexAPI?.isDevToolsOpen) {
-    try {
-      const res = await window.vortexAPI.isDevToolsOpen({ targetWebContentsId: targetWcId });
-      if (res && typeof res.open === 'boolean') {
-        isOpen = isOpen || res.open;
-      }
-    } catch(e) {}
-  } else if (typeof wv.isDevToolsOpened === 'function') {
-    isOpen = isOpen || wv.isDevToolsOpened();
-  }
+  let isOpen = false;
+  try {
+    if (typeof wv.isDevToolsOpened === 'function') {
+      isOpen = wv.isDevToolsOpened();
+    }
+  } catch(e) {}
 
   if (isOpen) {
     await closeDockedDevTools(wv);

@@ -664,24 +664,11 @@ webview:not(.devtools-dock-webview) {
    da janela do Vortex - igual ao Chrome/Edge.
    ══════════════════════════════════════════════════ */
 .devtools-dock-container {
-  width: 650px;
-  min-width: 360px;
-  max-width: 85vw;
-  height: 100%;
-  background: #1e1e1e;
-  border-left: 1px solid #2c2c2c;
-  display: none;
-  flex-direction: column;
-  position: relative;
-  z-index: 10;
-  flex-shrink: 0;
-  order: 9999;
-  overflow: hidden;
-  box-sizing: border-box;
+  display: none !important;
 }
 
 .devtools-dock-container.open {
-  display: flex !important;
+  display: none !important;
 }
 
 /* Barra de redimensionamento — aparece no lado esquerdo do painel */
