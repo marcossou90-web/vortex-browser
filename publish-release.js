@@ -79,11 +79,11 @@ try {
     githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
       `Vortex Browser ${tag} Oficial`,
-      'Popup de autorização de permissões de sites interativo idêntico ao Google Chrome (Localização, Notificações, Câmera, Microfone)',
-      'Configuração aprimorada de Inicialização e Página Inicial com botões para Salvar e Usar Página Atual',
-      'Modal avançado de Exclusão de Histórico e Cookies idêntico ao Chrome com filtros de período (15 min, 1h, 24h, 7 dias e tudo)',
-      'Limpeza de dados seletiva com suporte a cookies, cache, formulários e downloads',
-      'Omnibar simplificada e despoluída com foco em privacidade total'
+      'Correção na Inicialização Personalizada: URLs como google.com.br abrem diretamente com segurança (https://) sem erros de protocolo',
+      'Prevenção de abas duplicadas ao iniciar com página configurada',
+      'Configurações atualizadas: novo menu lateral "Histórico & Cookies" integrado',
+      'Acesso rápido com 1 clique ao Histórico Completo e à Exclusão de Dados de Navegação estilo Chrome',
+      'Popup de permissões e limpeza de cookies/histórico por período (15 min, 1h, 24h, 7 dias, tudo)'
     ]
   };
   fs.writeFileSync(docsVerPath, JSON.stringify(versionInfo, null, 2) + '\n', 'utf8');
@@ -166,7 +166,7 @@ if (token) {
           const patchBody = JSON.stringify({
             draft: false,
             name: `Vortex Browser ${tag}`,
-            body: `## 🚀 Novidades na versão ${tag}\n\n- 🔒 **Popup de Permissões estilo Chrome**: Solicitações interativas em tempo real para Localização, Notificações, Câmera e Microfone.\n- 🏠 **Inicialização e Página Inicial Flexível**: Salve sua URL personalizada ou capture a página atual com um clique.\n- 🍪 **Exclusão de Histórico e Cookies estilo Chrome**: Modal avançado com seleção de período (15 min, 1h, 24h, 7 dias, tudo) e controle seletivo de dados.\n- ⚡ **Auto-Update Integrado**: Atualização silenciosa em segundo plano idêntica ao Google Chrome.`
+            body: `## 🚀 Novidades na versão ${tag}\n\n- 🏠 **Inicialização Personalizada Confiável**: URLs sem protocolo (ex: \`google.com.br\`) agora abrem perfeitamente com \`https://\` sem erros ou abas duplicadas.\n- 🕐 **Menu Lateral "Histórico & Cookies"**: Histórico e cookies agora unificados nas Configurações, com botões de 1 clique para ver o histórico completo ou excluir dados.\n- 🗑️ **Limpeza de Dados estilo Google Chrome**: Modal interativo com abas Básica e Avançada, filtros de período e controle seletivo de cookies, cache e histórico.\n- 🔒 **Popup Interativo de Permissões**: Autorização e bloqueio de câmera, microfone, localização e notificações em tempo real.`
           });
           const patchReq = https.request({
             method: 'PATCH',

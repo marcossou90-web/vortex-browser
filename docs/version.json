@@ -1,18 +1,18 @@
 {
-  "version": "1.3.2",
-  "tag": "v1.3.2",
-  "name": "Vortex Browser v1.3.2",
-  "releaseDate": "2026-10-23T11:57:06.024Z",
-  "fileName": "Vortex-Browser-Setup-1.3.2.exe",
-  "fileSize": "77.4 MB",
-  "downloadUrl": "https://github.com/vortexbrowser/vortex-browser/releases/download/v1.3.2/Vortex.Browser.Setup.1.3.2.exe",
-  "githubReleaseUrl": "https://github.com/vortexbrowser/vortex-browser/releases/tag/v1.3.2",
+  "version": "1.3.3",
+  "tag": "v1.3.3",
+  "name": "Vortex Browser v1.3.3",
+  "releaseDate": "2026-10-23T12:17:36.567Z",
+  "fileName": "Vortex Browser Setup 1.3.3.exe",
+  "fileSize": "80.5 MB",
+  "downloadUrl": "https://github.com/vortexbrowser/vortex-browser/releases/download/v1.3.3/Vortex.Browser.Setup.1.3.3.exe",
+  "githubReleaseUrl": "https://github.com/vortexbrowser/vortex-browser/releases/tag/v1.3.3",
   "changelog": [
-    "Vortex Browser v1.3.2 Oficial",
-    "Popup de autorização de permissões de sites interativo idêntico ao Google Chrome (Localização, Notificações, Câmera, Microfone)",
-    "Configuração aprimorada de Inicialização e Página Inicial com botões para Salvar e Usar Página Atual",
-    "Modal avançado de Exclusão de Histórico e Cookies idêntico ao Chrome com filtros de período (15 min, 1h, 24h, 7 dias e tudo)",
-    "Limpeza de dados seletiva com suporte a cookies, cache, formulários e downloads",
-    "Omnibar simplificada e despoluída com foco em privacidade total"
+    "Vortex Browser v1.3.3 Oficial",
+    "Correção na Inicialização Personalizada: URLs como google.com.br abrem diretamente com segurança (https://) sem erros de protocolo",
+    "Prevenção de abas duplicadas ao iniciar com página configurada",
+    "Configurações atualizadas: novo menu lateral \"Histórico & Cookies\" integrado",
+    "Acesso rápido com 1 clique ao Histórico Completo e à Exclusão de Dados de Navegação estilo Chrome",
+    "Popup de permissões e limpeza de cookies/histórico por período (15 min, 1h, 24h, 7 dias, tudo)"
   ]
 }

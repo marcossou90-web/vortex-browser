@@ -1098,6 +1098,11 @@ function createTab(initialUrl = null) {
 
   let webview = null;
   if (initialUrl) {
+    let cleanUrl = initialUrl.trim();
+    if (cleanUrl && !cleanUrl.includes('://') && !cleanUrl.startsWith('about:') && !cleanUrl.startsWith('data:') && !cleanUrl.startsWith('view-source:') && !cleanUrl.startsWith('blob:')) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+    initialUrl = cleanUrl;
     webview = createWebview(id, initialUrl);
   }
 
@@ -2866,6 +2871,9 @@ window.addEventListener('message', (e) => {
   if (data.type === 'navigate' && data.url) {
     createTab(data.url);
   }
+  if (data.type === 'open-history-tab') {
+    openHistoryTab();
+  }
   if (data.type === 'clear-history') {
     browsingHistory = [];
     localStorage.removeItem('vortex-history');
@@ -3428,15 +3436,27 @@ window.addEventListener('message', async (event) => {
     const s = JSON.parse(localStorage.getItem('vortex-settings') || '{}');
     if (s.startup === 'lastSession') {
       const savedUrls = JSON.parse(localStorage.getItem('vortex-last-session-urls') || '[]');
-      if (savedUrls && savedUrls.length > 0) {
-        savedUrls.forEach(url => createTab(url));
-        return;
+      if (savedUrls && Array.isArray(savedUrls) && savedUrls.length > 0) {
+        // Filtra URLs válidas para restaurar
+        const validUrls = savedUrls.filter(u => typeof u === 'string' && u.trim().length > 0);
+        if (validUrls.length > 0) {
+          validUrls.forEach(url => createTab(url));
+          return;
+        }
       }
     } else if (s.startup === 'customUrl' && s.homePage && s.homePage.trim()) {
-      createTab(s.homePage.trim());
+      let hp = s.homePage.trim();
+      if (!hp.includes('://') && !hp.startsWith('about:') && !hp.startsWith('data:')) {
+        hp = 'https://' + hp;
+      }
+      createTab(hp);
       return;
-    } else if (s.homePage && s.homePage.trim() && s.startup !== 'newtab' && s.startup !== 'home') {
-      createTab(s.homePage.trim());
+    } else if (s.homePage && s.homePage.trim() && s.startup !== 'newtab' && s.startup !== 'home' && s.startup !== 'lastSession') {
+      let hp = s.homePage.trim();
+      if (!hp.includes('://') && !hp.startsWith('about:') && !hp.startsWith('data:')) {
+        hp = 'https://' + hp;
+      }
+      createTab(hp);
       return;
     }
   } catch(e) {}

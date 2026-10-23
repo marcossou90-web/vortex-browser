@@ -44,12 +44,9 @@
         <a class="nav-item" data-section="cookies" href="#">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
-            <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
-            <circle cx="15" cy="8" r="1.2" fill="currentColor"/>
-            <circle cx="10" cy="15" r="1.5" fill="currentColor"/>
-            <circle cx="15" cy="14" r="1.2" fill="currentColor"/>
+            <polyline points="12 6 12 12 16 14"/>
           </svg>
-          Cookies & Consentimento
+          Histórico & Cookies
         </a>
         <a class="nav-item" data-section="search" href="#">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -137,9 +134,25 @@
         </div>
       </section>
       <section id="section-cookies" class="settings-section">
-        <h2 class="section-title">🍪 Cookies & Consentimento</h2>
+        <h2 class="section-title">🕐 Histórico, Cookies e Dados de Navegação</h2>
         <div class="setting-desc-hero">
-          Gerencie cookies de sites, configure aceitação automática de avisos da LGPD/GDPR e tenha controle total dos dados armazenados no seu computador.
+          Controle centralizado do histórico de navegação, cookies de páginas e dados armazenados, exatamente como no Google Chrome.
+        </div>
+
+        <!-- Botões de Ação Rápida de Histórico & Dados -->
+        <div class="setting-card">
+          <div class="setting-info">
+            <div class="setting-label">Histórico de Navegação e Dados Salvos</div>
+            <div class="setting-desc">Acesse a lista completa de páginas visitadas ou limpe seus dados com 1 clique</div>
+          </div>
+          <div class="setting-control" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-setting-action" id="btnOpenHistoryPageSettings" style="display:flex; align-items:center; gap:6px;">
+              <span>🕐</span> Abrir Histórico Completo
+            </button>
+            <button type="button" class="btn-setting-action btn-danger-action" id="btnClearHistoryAndCookiesSettings" style="display:flex; align-items:center; gap:6px;">
+              <span>🗑️</span> Excluir Dados de Navegação...
+            </button>
+          </div>
         </div>
 
         <div class="setting-card">

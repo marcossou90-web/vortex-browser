@@ -114,6 +114,17 @@ document.querySelectorAll('input, select').forEach(el => {
 
 // Botão Salvar Página Inicial com feedback visual
 document.getElementById('btnSaveHomePage')?.addEventListener('click', () => {
+  const input = document.getElementById('homePageInput');
+  const startupSelect = document.getElementById('startupSelect');
+  if (input && input.value.trim()) {
+    let val = input.value.trim();
+    if (!val.includes('://') && !val.startsWith('about:') && !val.startsWith('data:')) {
+      val = 'https://' + val;
+      input.value = val;
+    }
+    // Muda automaticamente para 'customUrl' para garantir que abrirá ao iniciar
+    if (startupSelect) startupSelect.value = 'customUrl';
+  }
   saveSettings();
   const btn = document.getElementById('btnSaveHomePage');
   if (btn) {
@@ -137,8 +148,10 @@ document.getElementById('btnUseCurrentPage')?.addEventListener('click', () => {
 window.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'current-page-url-response') {
     const input = document.getElementById('homePageInput');
+    const startupSelect = document.getElementById('startupSelect');
     if (input && e.data.url) {
       input.value = e.data.url;
+      if (startupSelect) startupSelect.value = 'customUrl';
       saveSettings();
       const btn = document.getElementById('btnSaveHomePage');
       if (btn) {
@@ -149,7 +162,21 @@ window.addEventListener('message', (e) => {
   }
 });
 
-// Botão limpar dados (abre o modal estilo Chrome ou envia solicitação)
+// Botão abrir página completa de histórico a partir das configurações
+document.getElementById('btnOpenHistoryPageSettings')?.addEventListener('click', () => {
+  try {
+    window.parent.postMessage({ type: 'open-history-tab' }, '*');
+  } catch(e) {}
+});
+
+// Botão limpar dados e histórico (abre modal estilo Chrome)
+document.getElementById('btnClearHistoryAndCookiesSettings')?.addEventListener('click', () => {
+  try {
+    window.parent.postMessage({ type: 'open-chrome-clear-modal' }, '*');
+  } catch(e) {}
+});
+
+// Botão limpar dados da aba privacidade
 document.getElementById('btnClearNow')?.addEventListener('click', () => {
   try {
     window.parent.postMessage({ type: 'open-chrome-clear-modal' }, '*');
