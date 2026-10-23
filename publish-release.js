@@ -73,9 +73,9 @@ try {
     tag: tag,
     name: `Vortex Browser ${tag}`,
     releaseDate: new Date().toISOString(),
-    fileName: `Vortex Browser Setup ${newVer}.exe`,
+    fileName: `Vortex-Browser-Setup-${newVer}.exe`,
     fileSize: '80.5 MB',
-    downloadUrl: `https://github.com/vortexbrowser/vortex-browser/releases/download/${tag}/Vortex.Browser.Setup.${newVer}.exe`,
+    downloadUrl: `https://github.com/vortexbrowser/vortex-browser/releases/download/${tag}/Vortex-Browser-Setup-${newVer}.exe`,
     githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
       `Vortex Browser ${tag} Oficial`,
