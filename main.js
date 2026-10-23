@@ -569,23 +569,18 @@ function initDefaultSession() {
     callback({ cancel: true });
   });
 
-  // Otimização de Performance de Rede, Headers de Privacidade e Compatibilidade com Google
-  const cleanChromeUA = (defaultSession.getUserAgent() || '')
-    .replace(/Electron\/[0-9.]+\s?/g, '')
-    .replace(/Vortex\/[0-9.]+\s?/g, '')
-    .trim() || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  // User-Agent padrão idêntico ao Google Chrome mais recente (garante compatibilidade 100% com WhatsApp Web, Google Docs, etc.)
+  const CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36';
 
-  defaultSession.setUserAgent(cleanChromeUA);
+  defaultSession.setUserAgent(CHROME_USER_AGENT);
 
   defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     // DNT (Do Not Track) e GPC (Global Privacy Control)
     details.requestHeaders['DNT'] = '1';
     details.requestHeaders['Sec-GPC'] = '1';
     
-    // Envia User-Agent de Chrome moderno padrão para evitar que plataformas como DIO/NextJS throttlem ou usem fallbacks lentos
-    if (!details.requestHeaders['User-Agent'] || details.requestHeaders['User-Agent'].includes('Electron')) {
-      details.requestHeaders['User-Agent'] = cleanChromeUA;
-    }
+    // Sempre envia o User-Agent oficial do Google Chrome para eliminar detecções e alertas em WhatsApp Web, DIO, etc.
+    details.requestHeaders['User-Agent'] = CHROME_USER_AGENT;
     
     callback({ requestHeaders: details.requestHeaders });
   });
@@ -1807,6 +1802,11 @@ app.whenReady().then(() => {
 
   // Garante isolamento estrito contra injeção maliciosa em webviews (reforço de segurança do Chromium)
   app.on('web-contents-created', (event, contents) => {
+    // Define User-Agent padrão em todo webContents (garante que navigator.userAgent em JS retorne Chrome 134)
+    if (typeof contents.setUserAgent === 'function') {
+      contents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36');
+    }
+
     contents.on('will-attach-webview', (wvEvent, webPreferences, params) => {
       // Impede qualquer script em páginas web de tentar acessar módulos Node.js
       delete webPreferences.preload;

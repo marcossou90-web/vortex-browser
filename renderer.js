@@ -669,6 +669,7 @@ function createIncognitoTabWithPartition(partition, initialUrl) {
   wv.style.display = 'none';
   wv.setAttribute('allowpopups', '');
   wv.setAttribute('plugins', '');
+  wv.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36');
   wv.setAttribute('partition', partition); // Isolamento real de sessão
 
   if (initialUrl) {
@@ -1147,6 +1148,7 @@ function createWebview(id, url) {
   wv.style.display = 'none';
   wv.setAttribute('allowpopups', '');
   wv.setAttribute('plugins', ''); // Habilita visualizador embutido de PDFs
+  wv.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36');
 
   wv.addEventListener('did-start-loading', () => {
     const t = tabs.find(item => item.id === id);
