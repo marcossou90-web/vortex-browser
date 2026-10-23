@@ -1757,10 +1757,16 @@ ipcMain.handle('download-update', async () => {
     }
   }
 
+  // Fallback: Baixa diretamente DENTRO do Vortex Browser, NUNCA abrindo o Chrome ou navegador externo
   const direct = await checkGitHubReleaseDirect();
   if (direct && direct.downloadUrl) {
-    shell.openExternal(direct.downloadUrl);
-    return { success: true, external: true };
+    try {
+      console.log('[AutoUpdater] Baixando atualização diretamente no Vortex Browser:', direct.downloadUrl);
+      session.defaultSession.downloadURL(direct.downloadUrl);
+      return { success: true, internalDownload: true };
+    } catch (e) {
+      console.error('[AutoUpdater] Erro ao iniciar download interno da atualização:', e);
+    }
   }
 
   return { success: false, error: 'Não foi possível iniciar o download da atualização.' };

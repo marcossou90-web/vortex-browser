@@ -79,11 +79,11 @@ try {
     githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
       `Vortex Browser ${tag} Oficial`,
-      'Correção na Inicialização Personalizada: URLs como google.com.br abrem diretamente com segurança (https://) sem erros de protocolo',
-      'Prevenção de abas duplicadas ao iniciar com página configurada',
-      'Configurações atualizadas: novo menu lateral "Histórico & Cookies" integrado',
-      'Acesso rápido com 1 clique ao Histórico Completo e à Exclusão de Dados de Navegação estilo Chrome',
-      'Popup de permissões e limpeza de cookies/histórico por período (15 min, 1h, 24h, 7 dias, tudo)'
+      'Atualizações 100% Nativas: Downloads de atualização executados exclusivamente dentro do próprio Vortex Browser com notificação e barra de progresso, sem abrir navegadores externos',
+      'Download do instalador atualizado pelo site oficial e notificação integrada',
+      'Correção e liberação do arraste de janela para múltiplos monitores na barra de abas',
+      'Menus e popups com fechamento instantâneo por toggle e clique externo',
+      'DevTools e Inspeção de Elementos com abertura instantânea sem travamentos'
     ]
   };
   fs.writeFileSync(docsVerPath, JSON.stringify(versionInfo, null, 2) + '\n', 'utf8');
@@ -98,10 +98,7 @@ spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
 spawnSync('git', ['commit', '-m', `chore: release ${tag}`, '--allow-empty'], { stdio: 'inherit' });
 spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
 
-// electron-builder cria a tag e release automaticamente durante o upload
-// Não crie a tag antes para evitar o erro 422 'already_exists' da GitHub API
-
-// 4. Compila e publica via electron-builder (ele próprio cria a release no GitHub com todos os assets)
+// 4. Compila e publica via electron-builder
 console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
 const isWin = process.platform === 'win32';
 const npmCmd = isWin ? 'npm.cmd' : 'npm';
@@ -167,7 +164,7 @@ if (token) {
           const patchBody = JSON.stringify({
             draft: false,
             name: `Vortex Browser ${tag}`,
-            body: `## 🚀 Novidades na versão ${tag}\n\n- 🏠 **Inicialização Personalizada Confiável**: URLs sem protocolo (ex: \`google.com.br\`) agora abrem perfeitamente com \`https://\` sem erros ou abas duplicadas.\n- 🕐 **Menu Lateral "Histórico & Cookies"**: Histórico e cookies agora unificados nas Configurações, com botões de 1 clique para ver o histórico completo ou excluir dados.\n- 🗑️ **Limpeza de Dados estilo Google Chrome**: Modal interativo com abas Básica e Avançada, filtros de período e controle seletivo de cookies, cache e histórico.\n- 🔒 **Popup Interativo de Permissões**: Autorização e bloqueio de câmera, microfone, localização e notificações em tempo real.`
+            body: `## 🚀 Novidades na versão ${tag}\n\n- 🔄 **Atualização 100% Interna**: O Vortex agora notifica e baixa atualizações exclusivamente dentro da sua própria janela e gerenciador de downloads nativo, sem abrir Google Chrome ou outros navegadores.\n- 🖥️ **Arrastar entre Monitores**: Suporte nativo para arrastar a janela livremente entre múltiplos monitores pela barra de abas.\n- 🎯 **Popups e Menus Otimizados**: Menus com fechamento imediato por toggle e clique fora.\n- ⚡ **Inspecionar e DevTools Instantâneo**: Ferramentas de desenvolvedor abertas imediatamente sem atrasos.`
           });
           const patchReq = https.request({
             method: 'PATCH',
