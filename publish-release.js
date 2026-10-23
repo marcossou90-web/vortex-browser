@@ -79,12 +79,11 @@ try {
     githubReleaseUrl: `https://github.com/vortexbrowser/vortex-browser/releases/tag/${tag}`,
     changelog: [
       `Vortex Browser ${tag} Oficial`,
-      'Abertura inteligente maximizada preenchendo a tela por padrão igual ao Google Chrome',
-      'Restauração de posição e tamanho anterior da janela com suporte a duplo clique no topo',
-      'Nova interface moderna com abas curvas cibernéticas e Omnibar com efeito glow neon',
-      'Novo gerenciador de Cookies & Consentimento com controle de privacidade e limpeza ao fechar',
-      'Assistente inteligente de aceitação de banners de cookies (LGPD / GDPR)',
-      'Vortex Privacy Shield atualizado com proteção ultrarrápida contra anúncios e rastreadores'
+      'Popup de autorização de permissões de sites interativo idêntico ao Google Chrome (Localização, Notificações, Câmera, Microfone)',
+      'Configuração aprimorada de Inicialização e Página Inicial com botões para Salvar e Usar Página Atual',
+      'Modal avançado de Exclusão de Histórico e Cookies idêntico ao Chrome com filtros de período (15 min, 1h, 24h, 7 dias e tudo)',
+      'Limpeza de dados seletiva com suporte a cookies, cache, formulários e downloads',
+      'Omnibar simplificada e despoluída com foco em privacidade total'
     ]
   };
   fs.writeFileSync(docsVerPath, JSON.stringify(versionInfo, null, 2) + '\n', 'utf8');
@@ -167,7 +166,7 @@ if (token) {
           const patchBody = JSON.stringify({
             draft: false,
             name: `Vortex Browser ${tag}`,
-            body: `## 🚀 Novidades na versão ${tag}\n\n- 🖥️ **Abertura Inteligente em Tela Cheia (Estilo Google Chrome)**: O navegador agora salva e restaura automaticamente suas dimensões e posição da janela, abrindo sempre maximizado ou preenchendo sua tela.\n- 🗖 **Duplo Clique para Maximizar**: Dê duplo clique na barra de abas para alternar facilmente entre maximizado e tamanho normal.\n- ✨ **Nova Interface Cyber**: Abas modernas curvas com indicador neon dinâmico e barra de endereços Omnibar redesenhada.\n- 🍪 **Gerenciador de Cookies & Consentimento**: Controle granular de cookies, limpeza automática ao sair e assistente de aceitação de banners.\n- 🛡️ **Vortex Privacy Shield**: Proteção reforçada contra rastreadores e popups intrusivos.\n- ⚡ **Auto-Update Integrado**: Atualização silenciosa em segundo plano idêntica ao Google Chrome.`
+            body: `## 🚀 Novidades na versão ${tag}\n\n- 🔒 **Popup de Permissões estilo Chrome**: Solicitações interativas em tempo real para Localização, Notificações, Câmera e Microfone.\n- 🏠 **Inicialização e Página Inicial Flexível**: Salve sua URL personalizada ou capture a página atual com um clique.\n- 🍪 **Exclusão de Histórico e Cookies estilo Chrome**: Modal avançado com seleção de período (15 min, 1h, 24h, 7 dias, tudo) e controle seletivo de dados.\n- ⚡ **Auto-Update Integrado**: Atualização silenciosa em segundo plano idêntica ao Google Chrome.`
           });
           const patchReq = https.request({
             method: 'PATCH',
