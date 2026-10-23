@@ -114,7 +114,7 @@ body {
   align-items: center;
   margin: 0 8px;
   overflow: hidden;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag; /* Permite clicar e arrastar em todo espaço vazio da barra para outros monitores */
   min-width: 0;
 }
 .tab-bar-container::-webkit-scrollbar {
@@ -130,6 +130,7 @@ body {
   scrollbar-width: none;
   min-width: 0;
   max-width: calc(100% - 36px);
+  -webkit-app-region: drag;
 }
 .tabs-list::-webkit-scrollbar {
   display: none;
@@ -152,6 +153,7 @@ body {
   min-width: 120px;
   max-width: 240px;
   position: relative;
+  -webkit-app-region: no-drag; /* A aba em si recebe cliques normais */
 }
 
 .tab:hover {
@@ -273,6 +275,7 @@ body {
   border-radius: 8px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
 }
 
 .btn-new-tab:hover {
@@ -1290,7 +1293,7 @@ webview:not(.devtools-dock-webview) {
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-  z-index: 9999;
+  z-index: 10005;
   display: none;
   overflow: hidden;
   animation: menuSlideIn 0.15s ease;
@@ -1384,7 +1387,7 @@ webview:not(.devtools-dock-webview) {
 .context-menu-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9997;
+  z-index: 19999;
   display: none;
   background: transparent;
   pointer-events: auto;
@@ -1404,7 +1407,7 @@ webview:not(.devtools-dock-webview) {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
-  z-index: 9998;
+  z-index: 20000;
   display: none;
   min-width: 230px;
   overflow: hidden;
@@ -1615,7 +1618,7 @@ webview:not(.devtools-dock-webview) {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.15);
-  z-index: 10001;
+  z-index: 10005;
   padding: 14px 16px;
   flex-direction: column;
   gap: 12px;
@@ -2026,25 +2029,7 @@ body.incognito-active .address-bar-wrapper {
   box-shadow: 0 0 6px #10b981;
 }
 
-.vpn-popup {
-  position: fixed;
-  top: 78px;
-  right: 230px;
-  width: 320px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  z-index: 9998;
-  display: none;
-  overflow: hidden;
-  animation: menuSlideIn 0.15s ease;
-  -webkit-app-region: no-drag;
-}
-
-.vpn-popup.open {
-  display: block;
-}
+/* Obsolete duplicate .vpn-popup removed - see unified definition below */
 
 .vpn-popup-header {
   display: flex;
@@ -2163,7 +2148,7 @@ body.incognito-active .address-bar-wrapper {
   position: fixed; top: 78px; right: 200px; width: 320px;
   background: var(--bg-panel); border: 1px solid var(--border);
   border-radius: 12px; box-shadow: 0 14px 48px rgba(0,0,0,0.45);
-  z-index: 9998; display: none; overflow: hidden;
+  z-index: 10005; display: none; overflow: hidden;
   animation: menuSlideIn 0.15s ease; -webkit-app-region: no-drag;
 }
 .extensions-popup.open { display: block; }
@@ -2271,7 +2256,7 @@ body.incognito-active .address-bar-wrapper {
   position: fixed; top: 78px; right: 130px; width: 290px;
   background: var(--bg-panel); border: 1px solid var(--border);
   border-radius: 14px; box-shadow: 0 14px 48px rgba(0,0,0,.45);
-  z-index: 9997; display: none; overflow: hidden;
+  z-index: 10005; display: none; overflow: hidden;
   animation: menuSlideIn .15s ease; -webkit-app-region: no-drag;
 }
 .profile-popup.open { display: block; }
@@ -2512,12 +2497,13 @@ body.incognito-active .address-bar-wrapper {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: 0 16px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04);
-  z-index: 3500;
+  z-index: 10005;
   opacity: 0;
   transform: translateY(-8px) scale(.97);
   pointer-events: none;
   transition: opacity .18s ease, transform .18s ease;
   overflow: hidden;
+  -webkit-app-region: no-drag;
 }
 .vpn-popup.open {
   opacity: 1;

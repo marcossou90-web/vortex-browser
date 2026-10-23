@@ -2306,56 +2306,7 @@ async function openDockedDevTools(targetWv, inspectX, inspectY) {
   isDevToolsDockOpen = true;
   if (targetWcId) devToolsCurrentTargetWcId = targetWcId;
 
-  // Tenta obter o WebContents ID do webview do container lateral
-  let devtoolsWcId = null;
-  if (devtoolsDockWebviewEl) {
-    try {
-      if (typeof devtoolsDockWebviewEl.getWebContentsId === 'function') {
-        devtoolsWcId = devtoolsDockWebviewEl.getWebContentsId();
-      }
-    } catch (e) {}
-  }
-
-  // Se o webview do dock ainda não carregou WebContents, aguarda um instante
-  if (!devtoolsWcId && devtoolsDockWebviewEl) {
-    await new Promise((resolve) => {
-      const timer = setTimeout(resolve, 300);
-      devtoolsDockWebviewEl.addEventListener('dom-ready', () => {
-        clearTimeout(timer);
-        resolve();
-      }, { once: true });
-    });
-    try {
-      if (typeof devtoolsDockWebviewEl.getWebContentsId === 'function') {
-        devtoolsWcId = devtoolsDockWebviewEl.getWebContentsId();
-      }
-    } catch (e) {}
-  }
-
-  // Tenta acoplar o DevTools diretamente no webview lateral via IPC
-  if (targetWcId && window.vortexAPI?.dockDevTools) {
-    try {
-      const res = await window.vortexAPI.dockDevTools({
-        targetWebContentsId: targetWcId,
-        devtoolsWebContentsId: devtoolsWcId,
-        x: inspectX,
-        y: inspectY
-      });
-      if (res && res.success) {
-        // Se houver coordenadas de inspeção, chama também no elemento wv se disponível
-        if (typeof inspectX === 'number' && typeof inspectY === 'number' && typeof wv.inspectElement === 'function') {
-          setTimeout(() => {
-            try { wv.inspectElement(Math.round(inspectX), Math.round(inspectY)); } catch(e) {}
-          }, 200);
-        }
-        return;
-      }
-    } catch (e) {
-      console.warn('Erro ao chamar dockDevTools via IPC:', e);
-    }
-  }
-
-  // Fallback caso dockDevTools não tenha sucesso: abre via openDevTools ou método do webview
+  // Executa abertura imediata do DevTools acoplado ou inspeciona o elemento
   if (targetWcId && window.vortexAPI?.openDevTools) {
     try {
       await window.vortexAPI.openDevTools({
@@ -2370,6 +2321,7 @@ async function openDockedDevTools(targetWv, inspectX, inspectY) {
     }
   }
 
+  // Fallback direto no elemento webview
   try {
     if (typeof inspectX === 'number' && typeof inspectY === 'number' && typeof wv.inspectElement === 'function') {
       wv.inspectElement(Math.round(inspectX), Math.round(inspectY));
@@ -2527,22 +2479,48 @@ const btnMenuDots = document.getElementById('btnMenuDots');
 
 const contextMenuBackdrop = document.getElementById('contextMenuBackdrop');
 
+// Função unificada para fechar todos os menus, popups e dropdowns
+function closeAllPopups(exceptEl) {
+  const popups = [
+    dotsMenu,
+    document.getElementById('extensionsPopup'),
+    document.getElementById('profilePopup'),
+    document.getElementById('vpnPopup'),
+    document.getElementById('bookmarkPopup'),
+    document.getElementById('passwordSavePopup'),
+    contextMenu
+  ];
+  popups.forEach(p => {
+    if (p && p !== exceptEl) {
+      p.classList.remove('open');
+    }
+  });
+  if (contextMenuBackdrop && contextMenuBackdrop !== exceptEl) {
+    contextMenuBackdrop.classList.remove('open');
+  }
+}
+
 function closeAllMenus() {
-  dotsMenu.classList.remove('open');
-  contextMenu.classList.remove('open');
-  if (contextMenuBackdrop) contextMenuBackdrop.classList.remove('open');
+  closeAllPopups();
 }
 
 btnMenuDots.addEventListener('click', (e) => {
   e.stopPropagation();
   const isOpen = dotsMenu.classList.contains('open');
-  closeAllMenus();
-  if (!isOpen) dotsMenu.classList.add('open');
+  closeAllPopups();
+  if (!isOpen) {
+    dotsMenu.classList.add('open');
+  }
 });
 
-document.addEventListener('click', (e) => {
-  if (!dotsMenu.contains(e.target) && e.target !== btnMenuDots) dotsMenu.classList.remove('open');
-  if (!contextMenu.contains(e.target)) contextMenu.classList.remove('open');
+// Listener global: fecha qualquer popup se clicar fora dele e fora do seu botão disparador
+document.addEventListener('pointerdown', (e) => {
+  const isInsidePopupOrButton = e.target.closest(
+    '#dotsMenu, #btnMenuDots, #extensionsPopup, #btnExtensions, #profilePopup, #btnProfileMenu, #vpnPopup, #btnVpn, #bookmarkPopup, #btnBookmarkStar, #passwordSavePopup, #contextMenu'
+  );
+  if (!isInsidePopupOrButton) {
+    closeAllPopups();
+  }
 });
 
 // ── Itens do menu ─────────────────────────
@@ -3303,12 +3281,14 @@ function closeBookmarkPopup() {
   if (bookmarkPopupEl) bookmarkPopupEl.classList.remove('open');
 }
 
+bookmarkPopupEl?.addEventListener('click', (e) => e.stopPropagation());
+
 // Star button click — open popup
 bookmarkStarBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (bookmarkPopupEl && bookmarkPopupEl.classList.contains('open')) {
-    closeBookmarkPopup();
-  } else {
+  const isOpen = bookmarkPopupEl && bookmarkPopupEl.classList.contains('open');
+  closeAllPopups();
+  if (!isOpen) {
     openBookmarkPopup();
   }
 });
@@ -3618,10 +3598,12 @@ function renderExtensionsPopup() {
 if (btnExtensionsEl) {
   btnExtensionsEl.addEventListener('click', (ev) => {
     ev.stopPropagation();
-    renderExtensionsPopup();
-    extensionsPopupEl.classList.toggle('open');
-    profilePopupEl && profilePopupEl.classList.remove('open');
-    document.getElementById('dotsMenu')?.classList.remove('open');
+    const isOpen = extensionsPopupEl.classList.contains('open');
+    closeAllPopups();
+    if (!isOpen) {
+      renderExtensionsPopup();
+      extensionsPopupEl.classList.add('open');
+    }
   });
 }
 
@@ -3642,10 +3624,7 @@ if (extPopupOpenPageEl) {
   });
 }
 
-// Close extensions popup when clicking outside
-document.addEventListener('click', () => {
-  extensionsPopupEl?.classList.remove('open');
-});
+// Previne fechar o popup ao clicar em seu conteúdo interno
 extensionsPopupEl?.addEventListener('click', (e) => e.stopPropagation());
 
 // ── Profile Popup ──────────────────────────────────
@@ -3715,15 +3694,16 @@ function updateProfileButton() {
 if (btnProfileMenuEl) {
   btnProfileMenuEl.addEventListener('click', (ev) => {
     ev.stopPropagation();
-    updateProfileButton();
-    profilePopupEl.classList.toggle('open');
-    extensionsPopupEl && extensionsPopupEl.classList.remove('open');
-    document.getElementById('dotsMenu')?.classList.remove('open');
+    const isOpen = profilePopupEl.classList.contains('open');
+    closeAllPopups();
+    if (!isOpen) {
+      updateProfileButton();
+      profilePopupEl.classList.add('open');
+    }
   });
 }
 
 profilePopupEl?.addEventListener('click', (e) => e.stopPropagation());
-document.addEventListener('click', () => profilePopupEl?.classList.remove('open'));
 
 // Profile popup button actions
 const profileLoginModalEl = document.getElementById('profileLoginModal');
@@ -3941,20 +3921,15 @@ if (window.vortexAPI?.getUserProfile) {
   // ── Abrir / fechar popup ────────────────────────────
   btnVpn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const allPopups = document.querySelectorAll(
-      '.dots-menu.open, .extensions-popup.open, .profile-popup.open, .vpn-popup.open'
-    );
-    allPopups.forEach(p => { if (p !== vpnPopup) p.classList.remove('open'); });
-    vpnPopup.classList.toggle('open');
-  });
-
-  btnVpnClose?.addEventListener('click', () => vpnPopup.classList.remove('open'));
-
-  document.addEventListener('click', (e) => {
-    if (!vpnPopup.contains(e.target) && e.target !== btnVpn) {
-      vpnPopup.classList.remove('open');
+    const isOpen = vpnPopup.classList.contains('open');
+    closeAllPopups();
+    if (!isOpen) {
+      vpnPopup.classList.add('open');
     }
   });
+
+  vpnPopup.addEventListener('click', (e) => e.stopPropagation());
+  btnVpnClose?.addEventListener('click', () => vpnPopup.classList.remove('open'));
 
   // ── Atualizar UI com base no estado ────────────────
   function updateVpnUI(connected, connecting = false) {

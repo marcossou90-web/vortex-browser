@@ -1498,11 +1498,9 @@ ipcMain.handle('open-devtools', async (event, { targetWebContentsId, mode, x, y 
       targetWc.openDevTools({ mode: devMode });
       const px = Math.max(0, Math.round(x));
       const py = Math.max(0, Math.round(y));
-      setTimeout(() => {
-        try {
-          if (!targetWc.isDestroyed()) targetWc.inspectElement(px, py);
-        } catch(e) {}
-      }, 150);
+      try {
+        if (!targetWc.isDestroyed()) targetWc.inspectElement(px, py);
+      } catch(e) {}
     } else {
       targetWc.openDevTools({ mode: devMode });
     }
