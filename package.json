@@ -38,7 +38,7 @@
         "provider": "github",
         "owner": "vortexbrowser",
         "repo": "vortex-browser",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ],
     "win": {
