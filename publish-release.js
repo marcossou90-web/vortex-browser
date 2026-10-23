@@ -98,38 +98,40 @@ spawnSync('git', ['add', '-A'], { stdio: 'inherit' });
 spawnSync('git', ['commit', '-m', `chore: release ${tag}`, '--allow-empty'], { stdio: 'inherit' });
 spawnSync('git', ['push', 'origin', 'main'], { stdio: 'inherit' });
 
-// 4. Compila e publica via electron-builder
-console.log(`\n[3/4] Compilando instalador .exe e publicando release oficial ${tag} no GitHub...`);
+// 4. Compila o instalador .exe do Vortex
+console.log(`\n[3/4] Compilando instalador .exe para Windows (NSIS)...`);
 const isWin = process.platform === 'win32';
 const npmCmd = isWin ? 'npm.cmd' : 'npm';
 
-// Limpa artefatos antigos de dist para evitar que o latest.yml anterior seja enviado
+// Limpa artefatos antigos de dist
 const distDir = path.join(__dirname, 'dist');
 if (fs.existsSync(distDir)) {
   try {
     fs.rmSync(distDir, { recursive: true, force: true });
-    console.log('[Build] Pasta dist limpa para evitar conflitos de versão.');
+    console.log('[Build] Pasta dist limpa para evitar conflitos.');
   } catch (e) {}
 }
 
-const buildResult = spawnSync(npmCmd, ['run', 'dist', '--', '--publish', 'always'], {
+const buildResult = spawnSync(npmCmd, ['run', 'dist'], {
   stdio: 'inherit',
   env: process.env,
   shell: true
 });
 
 if (buildResult.status !== 0) {
-  console.error('\n[ERRO] Falha durante a compilação ou publicação.');
+  console.error('\n[ERRO] Falha durante a compilação do instalador.');
   process.exit(buildResult.status || 1);
 }
 
 // Garante que latest.yml e hash sha512 estejam prontos para o autoUpdater
 const ymlPath = path.join(__dirname, 'dist', 'latest.yml');
+let exeName = '';
+let exeFullPath = '';
 try {
   const exeFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.exe') && !f.includes('uninstaller'));
   if (exeFiles.length > 0) {
-    const exeName = exeFiles[0];
-    const exeFullPath = path.join(distDir, exeName);
+    exeName = exeFiles[0];
+    exeFullPath = path.join(distDir, exeName);
     const buf = fs.readFileSync(exeFullPath);
     const sha512 = crypto.createHash('sha512').update(buf).digest('base64');
     const autoYml = [
@@ -146,79 +148,157 @@ try {
   }
 } catch (e) {}
 
-// 5. Garantir que a release seja marcada como publicada (draft: false) via GitHub API
+// 5. Cria ou atualiza a Release no GitHub e faz upload de todos os assets
 const token = process.env.GH_TOKEN;
 if (token) {
-  const getReq = https.request({
-    hostname: 'api.github.com',
-    path: '/repos/vortexbrowser/vortex-browser/releases',
-    headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
-  }, res => {
-    let data = '';
-    res.on('data', d => data += d);
-    res.on('end', async () => {
-      try {
-        const list = JSON.parse(data);
-        const rel = Array.isArray(list) ? list.find(r => r.tag_name === tag) : null;
-        if (rel) {
-          const patchBody = JSON.stringify({
-            draft: false,
-            name: `Vortex Browser ${tag}`,
-            body: `## 🚀 Novidades na versão ${tag}\n\n- 🔄 **Atualização 100% Interna**: O Vortex agora notifica e baixa atualizações exclusivamente dentro da sua própria janela e gerenciador de downloads nativo, sem abrir Google Chrome ou outros navegadores.\n- 🖥️ **Arrastar entre Monitores**: Suporte nativo para arrastar a janela livremente entre múltiplos monitores pela barra de abas.\n- 🎯 **Popups e Menus Otimizados**: Menus com fechamento imediato por toggle e clique fora.\n- ⚡ **Inspecionar e DevTools Instantâneo**: Ferramentas de desenvolvedor abertas imediatamente sem atrasos.`
-          });
-          const patchReq = https.request({
-            method: 'PATCH',
-            hostname: 'api.github.com',
-            path: `/repos/vortexbrowser/vortex-browser/releases/${rel.id}`,
-            headers: {
-              'Authorization': 'token ' + token,
-              'User-Agent': 'VortexUpdater',
-              'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(patchBody)
-            }
-          }, pres => {
-            console.log(`[GitHub API] Status da publicação oficial: ${pres.statusCode}`);
-          });
-          patchReq.write(patchBody);
-          patchReq.end();
+  console.log(`[GitHub API] Publicando release ${tag} e fazendo upload dos artefatos...`);
 
-          // Upload de latest.yml e blockmap caso faltem nos assets da release
-          const uploadAsset = (name, cType, data) => new Promise(resolve => {
-            const upReq = https.request({
-              method: 'POST',
-              hostname: 'uploads.github.com',
-              path: `/repos/vortexbrowser/vortex-browser/releases/${rel.id}/assets?name=${encodeURIComponent(name)}`,
-              headers: {
-                'Authorization': 'token ' + token,
-                'User-Agent': 'VortexUploader',
-                'Content-Type': cType,
-                'Content-Length': data.length
-              }
-            }, r => resolve(r.statusCode));
-            upReq.on('error', () => resolve(null));
-            upReq.write(data);
-            upReq.end();
-          });
-
-          try {
-            const hasYml = rel.assets && rel.assets.some(a => a.name === 'latest.yml');
-            if (!hasYml && fs.existsSync(ymlPath)) {
-              await uploadAsset('latest.yml', 'text/yaml', fs.readFileSync(ymlPath));
-            }
-            const blockmapFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.blockmap'));
-            for (const bm of blockmapFiles) {
-              const targetName = bm.replace(/\s+/g, '-');
-              const hasBm = rel.assets && rel.assets.some(a => a.name === targetName);
-              if (!hasBm) {
-                await uploadAsset(targetName, 'application/octet-stream', fs.readFileSync(path.join(distDir, bm)));
-              }
-            }
-          } catch(e) {}
-        }
-      } catch(e) {}
+  const ghRequest = (options, postData) => new Promise((resolve, reject) => {
+    const r = https.request(options, res => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => resolve({ statusCode: res.statusCode, body }));
     });
+    r.on('error', reject);
+    if (postData) r.write(postData);
+    r.end();
   });
-  getReq.end();
+
+  const uploadAsset = (releaseId, name, contentType, buffer) => new Promise(resolve => {
+    const upReq = https.request({
+      method: 'POST',
+      hostname: 'uploads.github.com',
+      path: `/repos/vortexbrowser/vortex-browser/releases/${releaseId}/assets?name=${encodeURIComponent(name)}`,
+      headers: {
+        'Authorization': 'token ' + token,
+        'User-Agent': 'VortexUploader',
+        'Content-Type': contentType,
+        'Content-Length': buffer.length
+      }
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        console.log(`[Upload Asset] ${name} -> Status: ${res.statusCode}`);
+        resolve(res.statusCode);
+      });
+    });
+    upReq.on('error', (err) => {
+      console.warn(`[Upload Asset Error] ${name}:`, err.message);
+      resolve(null);
+    });
+    upReq.write(buffer);
+    upReq.end();
+  });
+
+  (async () => {
+    try {
+      // 1. Cria a tag no Git remoto se ainda não existir
+      spawnSync('git', ['tag', '-f', tag], { stdio: 'ignore' });
+      spawnSync('git', ['push', 'origin', tag, '--force'], { stdio: 'ignore' });
+
+      // 2. Procura se a release já existe
+      const listRes = await ghRequest({
+        hostname: 'api.github.com',
+        path: '/repos/vortexbrowser/vortex-browser/releases',
+        headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
+      });
+      const releases = JSON.parse(listRes.body || '[]');
+      let rel = Array.isArray(releases) ? releases.find(r => r.tag_name === tag) : null;
+
+      const releaseBody = `## 🚀 Novidades na versão ${tag}\n\n- 🔄 **Atualização 100% Interna**: O Vortex agora notifica e baixa atualizações exclusivamente dentro da sua própria janela e gerenciador de downloads nativo, sem abrir Google Chrome ou outros navegadores.\n- 🖥️ **Arrastar entre Monitores**: Suporte nativo para arrastar a janela livremente entre múltiplos monitores pela barra de abas.\n- 🎯 **Popups e Menus Otimizados**: Menus com fechamento imediato por toggle e clique fora.\n- ⚡ **Inspecionar e DevTools Instantâneo**: Ferramentas de desenvolvedor abertas imediatamente sem atrasos.`;
+
+      if (!rel) {
+        console.log(`[GitHub API] Criando nova Release ${tag}...`);
+        const createRes = await ghRequest({
+          method: 'POST',
+          hostname: 'api.github.com',
+          path: '/repos/vortexbrowser/vortex-browser/releases',
+          headers: {
+            'Authorization': 'token ' + token,
+            'User-Agent': 'VortexUpdater',
+            'Content-Type': 'application/json'
+          }
+        }, JSON.stringify({
+          tag_name: tag,
+          name: `Vortex Browser ${tag}`,
+          body: releaseBody,
+          draft: false,
+          prerelease: false
+        }));
+        rel = JSON.parse(createRes.body || '{}');
+      } else {
+        console.log(`[GitHub API] Atualizando Release existente ${tag}...`);
+        await ghRequest({
+          method: 'PATCH',
+          hostname: 'api.github.com',
+          path: `/repos/vortexbrowser/vortex-browser/releases/${rel.id}`,
+          headers: {
+            'Authorization': 'token ' + token,
+            'User-Agent': 'VortexUpdater',
+            'Content-Type': 'application/json'
+          }
+        }, JSON.stringify({
+          draft: false,
+          name: `Vortex Browser ${tag}`,
+          body: releaseBody
+        }));
+      }
+
+      if (rel && rel.id) {
+        const existingAssets = rel.assets || [];
+
+        // Upload do .exe do instalador
+        if (exeFullPath && fs.existsSync(exeFullPath)) {
+          const exeUploadName = exeName.replace(/\s+/g, '-');
+          const already = existingAssets.find(a => a.name === exeUploadName);
+          if (already) {
+            await ghRequest({
+              method: 'DELETE',
+              hostname: 'api.github.com',
+              path: `/repos/vortexbrowser/vortex-browser/releases/assets/${already.id}`,
+              headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
+            });
+          }
+          await uploadAsset(rel.id, exeUploadName, 'application/octet-stream', fs.readFileSync(exeFullPath));
+        }
+
+        // Upload de blockmap
+        const blockmapFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.blockmap'));
+        for (const bm of blockmapFiles) {
+          const targetName = bm.replace(/\s+/g, '-');
+          const already = existingAssets.find(a => a.name === targetName);
+          if (already) {
+            await ghRequest({
+              method: 'DELETE',
+              hostname: 'api.github.com',
+              path: `/repos/vortexbrowser/vortex-browser/releases/assets/${already.id}`,
+              headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
+            });
+          }
+          await uploadAsset(rel.id, targetName, 'application/octet-stream', fs.readFileSync(path.join(distDir, bm)));
+        }
+
+        // Upload de latest.yml
+        if (fs.existsSync(ymlPath)) {
+          const already = existingAssets.find(a => a.name === 'latest.yml');
+          if (already) {
+            await ghRequest({
+              method: 'DELETE',
+              hostname: 'api.github.com',
+              path: `/repos/vortexbrowser/vortex-browser/releases/assets/${already.id}`,
+              headers: { 'Authorization': 'token ' + token, 'User-Agent': 'VortexUpdater' }
+            });
+          }
+          await uploadAsset(rel.id, 'latest.yml', 'text/yaml', fs.readFileSync(ymlPath));
+        }
+
+        console.log(`[GitHub API] Release ${tag} com todos os arquivos publicada com sucesso!`);
+      }
+    } catch (err) {
+      console.warn('[GitHub API Error]:', err.message);
+    }
+  })();
 }
 
 // Sincroniza tamanho real e artefato gerado em docs/version.json
